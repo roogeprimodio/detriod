@@ -1,21 +1,49 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:frenzy/core/services/firebase_service.dart';
+import 'package:frenzy/core/models/user.dart';
 
 class AuthProvider extends ChangeNotifier {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final firebase.FirebaseAuth _auth = firebase.FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   User? _user;
   bool _isLoading = false;
   bool _isAdmin = false;
 
   AuthProvider() {
-    _auth.authStateChanges().listen((User? user) async {
-      _user = user;
-      if (user != null) {
+    _auth.authStateChanges().listen((firebase.User? firebaseUser) async {
+      if (firebaseUser != null) {
+        // Get user data from Firestore
+        final userDoc =
+            await _firestore.collection('users').doc(firebaseUser.uid).get();
+        if (userDoc.exists) {
+          _user = User.fromMap({
+            'uid': firebaseUser.uid,
+            'email': firebaseUser.email ?? '',
+            'displayName': firebaseUser.displayName,
+            'photoURL': firebaseUser.photoURL,
+            'isAdmin': userDoc.data()?['isAdmin'] ?? false,
+            'walletBalance': userDoc.data()?['walletBalance'] ?? 0.0,
+          });
+        } else {
+          // Create new user document if it doesn't exist
+          _user = User(
+            uid: firebaseUser.uid,
+            email: firebaseUser.email ?? '',
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            isAdmin: false,
+            walletBalance: 0.0,
+          );
+          await _firestore
+              .collection('users')
+              .doc(firebaseUser.uid)
+              .set(_user!.toMap());
+        }
         _isAdmin = await FirebaseService.isUserAdmin();
       } else {
+        _user = null;
         _isAdmin = false;
       }
       notifyListeners();
@@ -31,7 +59,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      await FirebaseService.auth.signInWithEmailAndPassword(
+      await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -48,22 +76,25 @@ class AuthProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      final userCredential =
-          await FirebaseService.auth.createUserWithEmailAndPassword(
+      final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
       if (userCredential.user != null) {
-        await FirebaseService.firestore
+        final isAdmin = email.toLowerCase().endsWith("@admin.com");
+        final newUser = User(
+          uid: userCredential.user!.uid,
+          email: email,
+          displayName: name,
+          isAdmin: isAdmin,
+          walletBalance: 0.0,
+        );
+
+        await _firestore
             .collection('users')
             .doc(userCredential.user!.uid)
-            .set({
-          'name': name,
-          'email': email,
-          'isAdmin': email.toLowerCase().endsWith("@admin.com"),
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+            .set(newUser.toMap());
       }
     } catch (e) {
       debugPrint('Error signing up: $e');
@@ -78,7 +109,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      await FirebaseService.auth.signOut();
+      await _auth.signOut();
     } catch (e) {
       debugPrint('Error signing out: $e');
       rethrow;
@@ -90,7 +121,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> resetPassword(String email) async {
     try {
-      await FirebaseService.auth.sendPasswordResetEmail(email: email);
+      await _auth.sendPasswordResetEmail(email: email);
     } catch (e) {
       debugPrint('Error resetting password: $e');
       rethrow;

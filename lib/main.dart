@@ -10,6 +10,7 @@ import 'package:frenzy/features/home/presentation/screens/home_screen.dart';
 import 'package:frenzy/features/admin/presentation/screens/admin_dashboard_screen.dart';
 import 'package:frenzy/core/config/firebase_options.dart';
 import 'package:frenzy/core/services/firebase_service.dart';
+import 'package:frenzy/core/config/app_router.dart';
 
 void main() async {
   try {
@@ -100,6 +101,7 @@ class MyApp extends StatelessWidget {
             ),
             themeMode:
                 themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            onGenerateRoute: AppRouter.generateRoute,
             home: Consumer<AuthProvider>(
               builder: (context, authProvider, _) {
                 if (authProvider.isLoading) {
@@ -128,11 +130,6 @@ class MyApp extends StatelessWidget {
                 }
               },
             ),
-            routes: {
-              '/login': (context) => const LoginScreen(),
-              '/home': (context) => const HomeScreen(),
-              '/admin': (context) => const AdminDashboardScreen(),
-            },
           );
         },
       ),

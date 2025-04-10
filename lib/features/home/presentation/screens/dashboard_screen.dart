@@ -4,6 +4,7 @@ import '../../../games/domain/models/game.dart';
 import 'package:provider/provider.dart';
 import 'package:frenzy/core/providers/theme_provider.dart';
 import 'package:frenzy/core/config/app_router.dart';
+import 'package:frenzy/features/games/presentation/screens/game_details_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -89,11 +90,19 @@ class DashboardScreen extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: () {
-                  Navigator.pushNamed(
+                  debugPrint('Game card tapped: ${game.title}');
+                  debugPrint('Game ID: ${game.id}');
+                  debugPrint('Game details: ${game.toMap()}');
+                  Navigator.push(
                     context,
-                    AppRouter.gameDetails,
-                    arguments: game,
-                  );
+                    MaterialPageRoute(
+                      builder: (context) => GameDetailsScreen(game: game),
+                    ),
+                  ).then((_) {
+                    debugPrint('Navigation completed');
+                  }).catchError((error) {
+                    debugPrint('Navigation error: $error');
+                  });
                 },
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
