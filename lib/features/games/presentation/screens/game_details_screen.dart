@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:frenzy/core/providers/theme_provider.dart';
+import 'package:frenzy/core/providers/auth_provider.dart';
 import 'package:frenzy/core/widgets/common_app_bar.dart';
 import 'package:frenzy/features/games/domain/models/game.dart';
+import 'package:frenzy/features/games/domain/models/match.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GameDetailsScreen extends StatelessWidget {
@@ -16,6 +18,7 @@ class GameDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
+    final authProvider = context.watch<AuthProvider>();
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -125,10 +128,10 @@ class GameDetailsScreen extends StatelessWidget {
                   // Matches List
                   StreamBuilder(
                     stream: FirebaseFirestore.instance
-                        .collection('games')
-                        .doc(game.id)
                         .collection('matches')
-                        .where('status', isEqualTo: 'active')
+                        .where('gameId', isEqualTo: game.id)
+                        .where('status', whereIn: ['upcoming', 'ongoing'])
+                        .orderBy('startTime')
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -162,17 +165,23 @@ class GameDetailsScreen extends StatelessWidget {
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: matches.length,
                         itemBuilder: (context, index) {
-                          final match = matches[index];
+                          final matchData =
+                              matches[index].data() as Map<String, dynamic>;
+                          final match = Match.fromFirestore(matches[index]);
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
-                              title: Text(match['title'] ?? 'Untitled Match'),
+                              title: Text(match.title),
                               subtitle: Text(
-                                '${match['currentParticipants'] ?? 0}/${match['maxParticipants'] ?? 0} Players',
+                                '${match.currentParticipants}/${match.maxParticipants} Players',
                               ),
                               trailing: ElevatedButton(
                                 onPressed: () {
-                                  // TODO: Navigate to match details
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/match-details',
+                                    arguments: match,
+                                  );
                                 },
                                 child: const Text('Join'),
                               ),
@@ -188,13 +197,15 @@ class GameDetailsScreen extends StatelessWidget {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // TODO: Show create match dialog
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Create Match'),
-      ),
+      floatingActionButton: authProvider.isAdmin
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                // TODO: Show create match dialog
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Create Match'),
+            )
+          : null,
     );
   }
 }
