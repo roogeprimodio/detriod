@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/providers/auth_provider.dart';
-import '../../../../core/config/app_router.dart';
 import '../../domain/models/game.dart';
 import '../../domain/models/match.dart';
 

@@ -79,14 +79,14 @@ class _LiveViewScreenState extends State<LiveViewScreen> {
                         Icon(
                           Icons.live_tv,
                           size: 64,
-                          color: colorScheme.onBackground.withOpacity(0.5),
+                          color: colorScheme.onSurface.withOpacity(0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'No live streams available',
                           style: TextStyle(
                             fontSize: 18,
-                            color: colorScheme.onBackground.withOpacity(0.7),
+                            color: colorScheme.onSurface.withOpacity(0.7),
                           ),
                         ),
                       ],
@@ -215,7 +215,7 @@ class _LiveViewScreenState extends State<LiveViewScreen> {
                                         stream['streamerName'] ??
                                             'Unknown Streamer',
                                         style: TextStyle(
-                                          color: colorScheme.onBackground
+                                          color: colorScheme.onSurface
                                               .withOpacity(0.7),
                                           fontSize: 14,
                                         ),
@@ -227,14 +227,14 @@ class _LiveViewScreenState extends State<LiveViewScreen> {
                                           Icon(
                                             Icons.remove_red_eye,
                                             size: 16,
-                                            color: colorScheme.onBackground
+                                            color: colorScheme.onSurface
                                                 .withOpacity(0.7),
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
                                             '${stream['viewerCount'] ?? 0} viewers',
                                             style: TextStyle(
-                                              color: colorScheme.onBackground
+                                              color: colorScheme.onSurface
                                                   .withOpacity(0.7),
                                               fontSize: 14,
                                             ),

@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:frenzy/core/providers/auth_provider.dart';
-import 'package:frenzy/core/providers/theme_provider.dart';
-import 'package:frenzy/features/auth/presentation/screens/login_screen.dart';
+import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/providers/theme_provider.dart';
+import '../../../auth/presentation/screens/login_screen.dart';
+import '../widgets/admin_nav_drawer.dart';
+import '../widgets/admin_stats_card.dart';
+import '../widgets/admin_quick_actions.dart';
+import 'game_management_screen.dart';
+import 'match_management_screen.dart';
+import 'user_management_screen.dart';
+import 'reports_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -35,6 +42,7 @@ class AdminDashboard extends StatelessWidget {
           ),
         ],
       ),
+      drawer: const AdminNavDrawer(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -45,15 +53,11 @@ class AdminDashboard extends StatelessWidget {
                 'Welcome, ${user?.email ?? "Admin"}!',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'Frenzy Admin Panel',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
+              const AdminStatsCard(),
+              const SizedBox(height: 24),
+              const AdminQuickActions(),
+              const SizedBox(height: 24),
               Expanded(
                 child: GridView.count(
                   crossAxisCount: 2,
@@ -62,34 +66,54 @@ class AdminDashboard extends StatelessWidget {
                   children: [
                     _buildDashboardCard(
                       context,
+                      'Game Management',
+                      Icons.games,
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const GameManagementScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildDashboardCard(
+                      context,
+                      'Match Management',
+                      Icons.emoji_events,
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MatchManagementScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildDashboardCard(
+                      context,
                       'User Management',
                       Icons.people,
                       () {
-                        // TODO: Navigate to user management
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const UserManagementScreen(),
+                          ),
+                        );
                       },
                     ),
                     _buildDashboardCard(
                       context,
-                      'Analytics',
+                      'Reports & Analytics',
                       Icons.analytics,
                       () {
-                        // TODO: Navigate to analytics
-                      },
-                    ),
-                    _buildDashboardCard(
-                      context,
-                      'Settings',
-                      Icons.settings,
-                      () {
-                        // TODO: Navigate to settings
-                      },
-                    ),
-                    _buildDashboardCard(
-                      context,
-                      'Reports',
-                      Icons.assessment,
-                      () {
-                        // TODO: Navigate to reports
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ReportsScreen(),
+                          ),
+                        );
                       },
                     ),
                   ],

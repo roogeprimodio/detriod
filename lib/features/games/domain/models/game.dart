@@ -44,18 +44,22 @@ class Game {
   }
 
   factory Game.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>? ?? {};
     return Game(
       id: doc.id,
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      genre: data['genre'] ?? '',
-      imageUrl: data['imageUrl'] ?? '',
-      rating: (data['rating'] ?? 0.0).toDouble(),
-      isActive: data['isActive'] ?? true,
-      releaseDate: (data['releaseDate'] as Timestamp).toDate(),
-      createdBy: data['createdBy'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      title: data['title']?.toString() ?? 'Untitled Game',
+      description: data['description']?.toString() ?? 'No description available',
+      genre: data['genre']?.toString() ?? 'Unknown Genre',
+      imageUrl: data['imageUrl']?.toString() ?? '',
+      rating: (data['rating'] != null ? (data['rating'] as num).toDouble() : 0.0),
+      isActive: data['isActive'] as bool? ?? true,
+      releaseDate: data['releaseDate'] != null
+          ? (data['releaseDate'] as Timestamp).toDate()
+          : DateTime.now(),
+      createdBy: data['createdBy']?.toString() ?? 'Unknown',
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
       updatedAt: data['updatedAt'] != null
           ? (data['updatedAt'] as Timestamp).toDate()
           : null,

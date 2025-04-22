@@ -9,7 +9,6 @@ import 'package:frenzy/features/auth/presentation/screens/login_screen.dart';
 import 'package:frenzy/features/home/presentation/screens/home_screen.dart';
 import 'package:frenzy/features/admin/presentation/screens/admin_dashboard_screen.dart';
 import 'package:frenzy/core/config/firebase_options.dart';
-import 'package:frenzy/core/services/firebase_service.dart';
 
 void main() async {
   try {

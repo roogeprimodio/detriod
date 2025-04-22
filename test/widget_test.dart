@@ -15,9 +15,9 @@ import 'package:frenzy/core/providers/theme_provider.dart';
 import 'package:frenzy/features/home/presentation/providers/user_profile_provider.dart';
 import 'package:frenzy/features/home/presentation/screens/home_screen.dart';
 import 'package:frenzy/features/home/presentation/screens/dashboard_screen.dart';
-import 'package:frenzy/features/admin/presentation/screens/admin_dashboard_screen.dart';
-import 'package:frenzy/features/admin/presentation/screens/admin_games_screen.dart';
-import 'package:frenzy/features/admin/presentation/screens/admin_matches_screen.dart';
+import 'package:frenzy/features/admin/presentation/screens/admin_dashboard.dart';
+import 'package:frenzy/features/admin/presentation/screens/game_management_screen.dart';
+import 'package:frenzy/features/admin/presentation/screens/match_management_screen.dart';
 import 'package:frenzy/core/widgets/common_app_bar.dart';
 import 'package:frenzy/core/widgets/common_bottom_nav.dart';
 
@@ -178,8 +178,8 @@ void main() {
             ChangeNotifierProvider(create: (_) => AuthProvider()),
             ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ],
-          child: MaterialApp(
-            home: const AdminDashboardScreen(),
+          child: const MaterialApp(
+            home: AdminDashboard(),
           ),
         ),
       );
@@ -209,8 +209,8 @@ void main() {
             ChangeNotifierProvider(create: (_) => AuthProvider()),
             ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ],
-          child: MaterialApp(
-            home: const AdminGamesScreen(),
+          child: const MaterialApp(
+            home: GameManagementScreen(),
           ),
         ),
       );
@@ -235,8 +235,8 @@ void main() {
             ChangeNotifierProvider(create: (_) => AuthProvider()),
             ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ],
-          child: MaterialApp(
-            home: const AdminMatchesScreen(),
+          child: const MaterialApp(
+            home: MatchManagementScreen(),
           ),
         ),
       );

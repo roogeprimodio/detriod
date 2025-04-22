@@ -198,7 +198,7 @@ class DashboardScreen extends StatelessWidget {
 
       if (snapshot.docs.isNotEmpty) {
         final doc = snapshot.docs.first;
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         debugPrint('First game ID: ${doc.id}');
         debugPrint('Fields: ${data.keys.join(', ')}');
 

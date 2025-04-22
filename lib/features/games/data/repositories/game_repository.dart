@@ -72,7 +72,7 @@ class GameRepository {
         .collection(_collection)
         .where('isActive', isEqualTo: true)
         .where('title', isGreaterThanOrEqualTo: query)
-        .where('title', isLessThanOrEqualTo: query + '\uf8ff')
+        .where('title', isLessThanOrEqualTo: '$query\uf8ff')
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => Game.fromFirestore(doc)).toList());

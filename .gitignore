@@ -41,3 +41,22 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase related
+.firebaserc
+firebase.json
+firestore.indexes.json
+firestore.rules
+/scripts/node_modules/
+/scripts/package-lock.json
+/scripts/package.json
+/scripts/setup_firebase_collections.js
+/scripts/setup_indexes.js
+
+# Sensitive files
+*.env
+*.key
+*.pem
+*.p12
+*.json.key
+*.service-account.json

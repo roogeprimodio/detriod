@@ -3,10 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:frenzy/core/providers/auth_provider.dart';
 import 'package:frenzy/core/providers/theme_provider.dart';
-import 'package:frenzy/features/home/presentation/screens/home_screen.dart';
-import 'package:frenzy/features/admin/presentation/screens/admin_dashboard.dart';
 import 'package:frenzy/features/auth/presentation/screens/signup_screen.dart';
-import 'package:frenzy/core/services/firebase_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -152,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen>
                             'Sign in to continue',
                             style: TextStyle(
                               fontSize: 16,
-                              color: colorScheme.onBackground.withOpacity(0.7),
+                              color: colorScheme.onSurface.withOpacity(0.7),
                             ),
                           ),
                         ],
@@ -183,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen>
                         ],
                         labelColor: colorScheme.primary,
                         unselectedLabelColor:
-                            colorScheme.onBackground.withOpacity(0.5),
+                            colorScheme.onSurface.withOpacity(0.5),
                         indicator: BoxDecoration(
                           color: isDark
                               ? colorScheme.surface.withOpacity(0.2)
@@ -404,7 +401,7 @@ class _LoginScreenState extends State<LoginScreen>
                 text: TextSpan(
                   text: "Don't have an account? ",
                   style: TextStyle(
-                    color: colorScheme.onBackground.withOpacity(0.7),
+                    color: colorScheme.onSurface.withOpacity(0.7),
                   ),
                   children: [
                     TextSpan(

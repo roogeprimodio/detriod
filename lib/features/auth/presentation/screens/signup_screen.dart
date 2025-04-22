@@ -351,8 +351,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 text: TextSpan(
                                   text: "Already have an account? ",
                                   style: TextStyle(
-                                    color: colorScheme.onBackground
-                                        .withOpacity(0.7),
+                                    color:
+                                        colorScheme.onSurface.withOpacity(0.7),
                                   ),
                                   children: [
                                     TextSpan(

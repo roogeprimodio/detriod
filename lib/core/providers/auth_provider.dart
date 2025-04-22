@@ -14,7 +14,7 @@ class AuthProvider extends ChangeNotifier {
     _auth.authStateChanges().listen((User? user) async {
       _user = user;
       if (user != null) {
-        _isAdmin = await FirebaseService.isUserAdmin();
+        _isAdmin = FirebaseService.isUserAdmin();
       } else {
         _isAdmin = false;
       }
