@@ -52,6 +52,9 @@ firestore.rules
 /scripts/package.json
 /scripts/setup_firebase_collections.js
 /scripts/setup_indexes.js
+*firebase-adminsdk*.json
+*-firebase-adminsdk-*.json
+scripts/*firebase*.json
 
 # Sensitive files
 *.env

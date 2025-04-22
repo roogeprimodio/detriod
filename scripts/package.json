@@ -1,0 +1,9 @@
+{
+  "name": "firebase-collections-setup",
+  "version": "1.0.0",
+  "description": "Script to set up Firebase collections for esports app",
+  "main": "setup_firebase_collections.js",
+  "dependencies": {
+    "firebase-admin": "^11.11.1"
+  }
+}

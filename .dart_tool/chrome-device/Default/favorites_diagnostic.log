@@ -1,0 +1,58 @@
+2025-04-17 10:02:55.997: [INFO] VisibilityChanged: 0
+2025-04-17 10:02:56.059: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2025-04-17 10:02:56.060: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2025-04-17 10:02:56.060: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2025-04-17 10:02:56.060: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2025-04-17 10:02:56.061: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2025-04-17 10:02:56.061: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2025-04-17 10:02:56.061: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2025-04-17 10:02:56.062: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2025-04-17 10:02:56.062: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2025-04-17 10:02:56.063: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2025-04-17 10:02:56.063: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2025-04-17 10:02:56.077: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:02:56.077: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2025-04-17 10:02:56.077: [INFO] OnDoneLoading sync enabled: 0
+2025-04-17 10:02:56.134: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2025-04-17 10:02:56.266: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 3
+2025-04-17 10:02:56.271: [INFO] Primary account changed.
+2025-04-17 10:02:56.271: [INFO] OnPrimaryAccountChanged PrimaryAccountChangeEvent::Type::kSet
+2025-04-17 10:02:56.274: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 3
+2025-04-17 10:02:56.482: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 3
+2025-04-17 10:02:59.538: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:02:59.538: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:02:59.539: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:02:59.539: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:03:00.106: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:03:00.106: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:03:00.106: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:03:00.107: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:03:00.108: [INFO] BookmarkNodeMoved
+2025-04-17 10:03:00.110: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:03:00.110: [INFO] BookmarkNodeMoved
+2025-04-17 10:03:00.110: [INFO] BookmarkNodeMoved
+2025-04-17 10:03:00.110: [INFO] BookmarkNodeMoved
+2025-04-17 10:03:00.110: [INFO] ReorderChildren, Url: 0, IsFolder: 1, IsWorkspace: 0
+2025-04-17 10:03:00.110: [INFO] Remove, DeletionOrigin: 19
+2025-04-17 10:03:00.110: [INFO] BookmarkNodeRemoved, Url: 0, IsFolder: 1, IsWorkspace: 0
+2025-04-17 10:03:00.110: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:03:00.110: [INFO] Remove, DeletionOrigin: 19
+2025-04-17 10:03:00.111: [INFO] BookmarkNodeRemoved, Url: 1, IsFolder: 0, IsWorkspace: 0
+2025-04-17 10:03:00.111: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:03:00.111: [INFO] Remove, DeletionOrigin: 19
+2025-04-17 10:03:00.111: [INFO] BookmarkNodeRemoved, Url: 1, IsFolder: 0, IsWorkspace: 0
+2025-04-17 10:03:00.111: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:03:00.111: [INFO] Remove, DeletionOrigin: 19
+2025-04-17 10:03:00.111: [INFO] BookmarkNodeRemoved, Url: 1, IsFolder: 0, IsWorkspace: 0
+2025-04-17 10:03:00.114: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 10:03:00.718: [INFO] Sync initialization duration: 3864ms
+2025-04-17 11:13:32.707: [INFO] VisibilityChanged: 0
+2025-04-17 11:13:32.748: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 11:13:32.748: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2025-04-17 11:13:32.748: [INFO] OnDoneLoading sync enabled: 1
+2025-04-17 11:13:36.269: [INFO] Sync initialization duration: 2057ms
+2025-04-17 11:16:47.521: [INFO] VisibilityChanged: 0
+2025-04-17 11:16:47.560: [INFO] BookmarkNodeAdded, ABU: 0
+2025-04-17 11:16:47.560: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2025-04-17 11:16:47.560: [INFO] OnDoneLoading sync enabled: 1
+2025-04-17 11:16:51.098: [INFO] Sync initialization duration: 2093ms
