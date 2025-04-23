@@ -6,6 +6,7 @@ import 'package:frenzy/core/providers/auth_provider.dart';
 import 'package:frenzy/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:frenzy/features/home/presentation/screens/live_view_screen.dart';
 import 'package:frenzy/features/home/presentation/screens/profile_screen.dart';
+import 'package:frenzy/features/home/presentation/widgets/custom_app_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -92,25 +93,13 @@ class _HomeScreenState extends State<HomeScreen>
     _initializeScreens(context);
 
     return Scaffold(
-      // Use CommonAppBar with dynamic title
-      appBar: CommonAppBar(
-        title: _getTitleForIndex(_currentIndex),
-        showBackButton: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none), // Example action
-            onPressed: () {
-              // TODO: Implement notifications action
-            },
-          ),
-        ],
+      appBar: const CustomAppBar(
+        title: 'Home',
       ),
-      // Use TabBarView for the main content
       body: TabBarView(
         controller: _tabController,
         children: _screens,
       ),
-      // Use CommonBottomNav
       bottomNavigationBar: CommonBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {

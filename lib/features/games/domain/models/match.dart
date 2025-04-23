@@ -52,10 +52,17 @@ class Match {
   }
 
   factory Match.fromMap(Map<String, dynamic> map) {
-    final startTime = (map['startTime'] as Timestamp).toDate();
-    final createdAt = (map['createdAt'] as Timestamp).toDate();
+    // Handle null timestamps with default values
+    final startTime = map['startTime'] != null 
+        ? (map['startTime'] as Timestamp).toDate()
+        : DateTime.now().add(const Duration(days: 1));
+    
+    final createdAt = map['createdAt'] != null 
+        ? (map['createdAt'] as Timestamp).toDate()
+        : DateTime.now();
+    
     final updatedAt = map['updatedAt'] != null 
-        ? (map['updatedAt'] as Timestamp).toDate() 
+        ? (map['updatedAt'] as Timestamp).toDate()
         : null;
 
     return Match(

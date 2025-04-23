@@ -26,26 +26,17 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
       ],
-      child: MaterialApp(
-        title: 'Frenzy',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepPurple,
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-        ),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepPurple,
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-        ),
-        themeMode: ThemeMode.light,
-        initialRoute: AppRouter.login,
-        onGenerateRoute: AppRouter.generateRoute,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Frenzy',
+            debugShowCheckedModeBanner: false,
+            theme: themeProvider.theme,
+            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            initialRoute: AppRouter.login,
+            onGenerateRoute: AppRouter.generateRoute,
+          );
+        },
       ),
     );
   }

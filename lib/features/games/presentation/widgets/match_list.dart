@@ -19,17 +19,8 @@ class MatchList extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('matches')
           .where('gameId', isEqualTo: gameId)
-          .get()
-          .asStream()
-          .map((snapshot) {
-            final docs = snapshot.docs;
-            docs.sort((a, b) {
-              final aTime = (a.data()['startTime'] as Timestamp).toDate();
-              final bTime = (b.data()['startTime'] as Timestamp).toDate();
-              return bTime.compareTo(aTime); // Descending order
-            });
-            return snapshot;
-          }),
+          .orderBy('startTime', descending: true)
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -38,40 +29,12 @@ class MatchList extends StatelessWidget {
         }
 
         if (snapshot.hasError) {
-          // Check for index error
-          final error = snapshot.error.toString();
-          if (error.contains('failed-precondition') && error.contains('requires an index')) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      size: 48,
-                      color: colorScheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Database Index Required',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colorScheme.error,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'This feature requires a database index to be created. Please contact support.',
-                      style: textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
+          debugPrint('Error fetching matches: ${snapshot.error}');
           return Center(
-            child: Text('Error: ${snapshot.error}'),
+            child: Text(
+              'Error loading matches: ${snapshot.error}',
+              style: TextStyle(color: colorScheme.error),
+            ),
           );
         }
 
@@ -108,7 +71,7 @@ class MatchList extends StatelessWidget {
           );
         }
 
-        final matches = snapshot.data?.docs ?? [];
+        final matches = snapshot.data!.docs;
 
         return ListView.builder(
           shrinkWrap: true,
@@ -127,7 +90,6 @@ class MatchList extends StatelessWidget {
                 ),
                 child: InkWell(
                   onTap: () {
-                    // Show match details
                     showDialog(
                       context: context,
                       builder: (context) => _buildMatchDetailsDialog(context, match),
@@ -199,35 +161,9 @@ class MatchList extends StatelessWidget {
                   ),
                 ),
               );
-            } catch (e, stackTrace) {
-              debugPrint('Error rendering match at index $index: $e\n$stackTrace');
-              return Card(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                color: colorScheme.errorContainer.withOpacity(0.1),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        color: colorScheme.error,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Error loading match data',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.error,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
+            } catch (e) {
+              debugPrint('Error loading match: $e');
+              return const SizedBox.shrink();
             }
           },
         );

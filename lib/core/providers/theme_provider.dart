@@ -22,6 +22,8 @@ class ThemeProvider with ChangeNotifier {
     appBarTheme: const AppBarTheme(
       centerTitle: true,
       elevation: 0,
+      backgroundColor: Colors.deepPurple,
+      foregroundColor: Colors.white,
     ),
     cardTheme: CardTheme(
       elevation: 4,
@@ -31,12 +33,19 @@ class ThemeProvider with ChangeNotifier {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
       ),
     ),
+    textTheme: const TextTheme(
+      bodyLarge: TextStyle(color: Colors.black87),
+      bodyMedium: TextStyle(color: Colors.black87),
+    ),
+    scaffoldBackgroundColor: Colors.grey[50],
   );
 
   static final _darkTheme = ThemeData(
@@ -49,6 +58,8 @@ class ThemeProvider with ChangeNotifier {
     appBarTheme: const AppBarTheme(
       centerTitle: true,
       elevation: 0,
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
     ),
     cardTheme: CardTheme(
       elevation: 4,
@@ -58,11 +69,18 @@ class ThemeProvider with ChangeNotifier {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
       ),
     ),
+    textTheme: const TextTheme(
+      bodyLarge: TextStyle(color: Colors.white),
+      bodyMedium: TextStyle(color: Colors.white),
+    ),
+    scaffoldBackgroundColor: Colors.grey[900],
   );
 }
