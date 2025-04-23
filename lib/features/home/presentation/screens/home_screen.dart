@@ -95,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen>
       // Use CommonAppBar with dynamic title
       appBar: CommonAppBar(
         title: _getTitleForIndex(_currentIndex),
-        // Add any specific actions for the home screen if needed
+        showBackButton: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none), // Example action

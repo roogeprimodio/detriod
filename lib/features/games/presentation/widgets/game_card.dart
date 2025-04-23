@@ -29,6 +29,10 @@ class GameCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final primaryCategory = game.categories.isNotEmpty ? game.categories.first : 'Unknown';
+    final hasPlayers = game.minPlayers != null || game.maxPlayers != null;
+
     return Card(
       elevation: 4,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -52,6 +56,7 @@ class GameCard extends StatelessWidget {
                         game.imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
+                          debugPrint('Error loading image: $error');
                           return Container(
                             color: Colors.grey[300],
                             child: const Center(
@@ -91,7 +96,7 @@ class GameCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title and Rating
+                  // Title and Players
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -106,40 +111,41 @@ class GameCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.amber,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              game.rating.toStringAsFixed(1),
-                              style: const TextStyle(
+                      if (hasPlayers)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.amber,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.people,
+                                size: 16,
                                 color: Colors.white,
-                                fontWeight: FontWeight.bold,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 4),
+                              Text(
+                                '${game.minPlayers ?? 1}-${game.maxPlayers ?? "∞"}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Genre
+                  // Category
                   Text(
-                    game.genre.isNotEmpty ? game.genre : 'No Genre',
+                    primaryCategory,
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 14,
@@ -148,9 +154,7 @@ class GameCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   // Description
                   Text(
-                    game.description.isNotEmpty
-                        ? game.description
-                        : 'No description available',
+                    game.description,
                     style: TextStyle(
                       color: Colors.grey[800],
                       fontSize: 14,

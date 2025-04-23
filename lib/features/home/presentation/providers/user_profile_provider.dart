@@ -62,8 +62,9 @@ class UserProfileProvider extends ChangeNotifier {
     try {
       if (_profile != null) {
         // Upload image to Firebase Storage
-        final downloadUrl = await _repository.uploadProfileImage(userId, imagePath);
-        
+        final downloadUrl =
+            await _repository.uploadProfileImage(userId, imagePath);
+
         // Update profile with new image URL
         final updatedProfile = _profile!.copyWith(profileImageUrl: downloadUrl);
         await _repository.updateUserProfile(updatedProfile);
@@ -73,10 +74,5 @@ class UserProfileProvider extends ChangeNotifier {
     } catch (e) {
       rethrow;
     }
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 }

@@ -60,6 +60,7 @@ class _LiveViewScreenState extends State<LiveViewScreen> {
       appBar: CommonAppBar(
         title: 'Live Streams',
         showThemeToggle: false, // Theme toggle is in HomeScreen
+        showBackButton: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

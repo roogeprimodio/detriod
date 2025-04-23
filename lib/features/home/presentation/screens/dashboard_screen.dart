@@ -14,16 +14,10 @@ class DashboardScreen extends StatelessWidget {
     final isDark = themeProvider.isDarkMode;
     final colorScheme = Theme.of(context).colorScheme;
 
-    // Add a direct fetch of a game doc to debug field names
-    // This is ONLY for debugging - remove after troubleshooting
-    _debugCheckGame();
-
-    // The Scaffold is provided by HomeScreen, so we just return the body content.
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('games')
           .where('isActive', isEqualTo: true)
-          .orderBy('releaseDate', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
         // Print detailed debug info for every stream update
@@ -46,27 +40,49 @@ class DashboardScreen extends StatelessWidget {
         }
 
         debugPrint('Has data: ${snapshot.hasData}');
-        if (snapshot.hasData) {
-          debugPrint('Docs count: ${snapshot.data?.docs.length}');
-          if (snapshot.data!.docs.isNotEmpty) {
-            // Log first doc to see what we're getting
-            final firstDoc =
-                snapshot.data!.docs.first.data() as Map<String, dynamic>;
-            debugPrint('First doc: $firstDoc');
-          }
-        }
+        final docs = snapshot.data?.docs ?? [];
+        debugPrint('Docs count: ${docs.length}');
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          debugPrint('Dashboard Stream: No active games found.');
-          return const Center(
-            child:
-                Text('No active games available right now. Check back later!'),
+        if (docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.sports_esports_outlined,
+                  size: 64,
+                  color: colorScheme.primary.withOpacity(0.5),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No active games available',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Check back later for new games',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                ),
+              ],
+            ),
           );
         }
 
-        final games =
-            snapshot.data!.docs.map((doc) => Game.fromFirestore(doc)).toList();
-        debugPrint('Dashboard Stream: Found ${games.length} games.');
+        final games = docs.map((doc) {
+          debugPrint('Processing game doc: ${doc.id}');
+          try {
+            return Game.fromFirestore(doc);
+          } catch (e) {
+            debugPrint('Error parsing game ${doc.id}: $e');
+            return null;
+          }
+        }).where((game) => game != null).cast<Game>().toList();
+
+        debugPrint('Successfully parsed ${games.length} games');
 
         return GridView.builder(
           padding: const EdgeInsets.all(16),
@@ -79,16 +95,11 @@ class DashboardScreen extends StatelessWidget {
           itemCount: games.length,
           itemBuilder: (context, index) {
             final game = games[index];
-            // Provide default values for potentially missing data
-            final imageUrl = game.imageUrl;
-            final title = game.title.isNotEmpty ? game.title : 'Untitled Game';
-            final genre = game.genre.isNotEmpty ? game.genre : 'Unknown Genre';
-            final rating = game.rating;
-
             return Card(
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: () {
+                  debugPrint('Navigating to game details: ${game.id}');
                   Navigator.pushNamed(
                     context,
                     AppRouter.gameDetails,
@@ -96,84 +107,100 @@ class DashboardScreen extends StatelessWidget {
                   );
                 },
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Game image
                     Expanded(
-                      child: imageUrl.isNotEmpty
-                          ? Image.network(
-                              imageUrl,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                debugPrint(
-                                    'Error loading image for $title: $error');
-                                return const Center(
-                                  child: Icon(Icons.games,
-                                      size: 50, color: Colors.grey),
-                                );
-                              },
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes !=
-                                            null
-                                        ? loadingProgress
-                                                .cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                        : null,
-                                  ),
-                                );
-                              },
-                            )
-                          : const Center(
-                              child: Icon(Icons.games,
-                                  size: 50, color: Colors.grey),
+                      flex: 3,
+                      child: Image.network(
+                        game.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          debugPrint('Error loading image for game ${game.id}: $error');
+                          return Container(
+                            color: isDark ? Colors.grey[800] : Colors.grey[200],
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              size: 32,
+                              color: isDark ? Colors.grey[600] : Colors.grey[400],
                             ),
+                          );
+                        },
+                      ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title, // Use default value
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+
+                    // Game info
+                    Expanded(
+                      flex: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Title
+                            Text(
+                              game.title,
+                              style: Theme.of(context).textTheme.titleMedium,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            genre, // Use default value
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                size: 16,
-                                color: Colors.amber,
-                              ),
-                              const SizedBox(width: 4),
+                            const SizedBox(height: 4),
+
+                            // Categories
+                            if (game.categories.isNotEmpty)
                               Text(
-                                // Ensure rating is displayed correctly
-                                rating.toStringAsFixed(1),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
+                                game.categories.first,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.primary,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
-                        ],
+
+                            const Spacer(),
+
+                            // Players and rating
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Players
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.people_outline,
+                                      size: 16,
+                                      color: colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      game.maxPlayers != null
+                                          ? '${game.minPlayers ?? 1}-${game.maxPlayers}'
+                                          : '${game.minPlayers ?? 1}+',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
+
+                                // Rating
+                                if (game.totalRatings > 0)
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.star,
+                                        size: 16,
+                                        color: Colors.amber,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        game.rating.toStringAsFixed(1),
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -184,60 +211,5 @@ class DashboardScreen extends StatelessWidget {
         );
       },
     );
-  }
-
-  // Debug method to directly check a game document
-  Future<void> _debugCheckGame() async {
-    try {
-      // Get all games without filters to see what's actually in the collection
-      final snapshot =
-          await FirebaseFirestore.instance.collection('games').get();
-      debugPrint('=== DEBUG DIRECT CHECK ===');
-      debugPrint(
-          'Total games in collection (unfiltered): ${snapshot.docs.length}');
-
-      if (snapshot.docs.isNotEmpty) {
-        final doc = snapshot.docs.first;
-        final data = doc.data();
-        debugPrint('First game ID: ${doc.id}');
-        debugPrint('Fields: ${data.keys.join(', ')}');
-
-        // Check for isActive field specifically
-        if (data.containsKey('isActive')) {
-          debugPrint('isActive field exists: ${data['isActive']}');
-          debugPrint('isActive field type: ${data['isActive'].runtimeType}');
-        } else {
-          // Check for spelling variations
-          final possibleFieldNames = data.keys
-              .where((key) =>
-                  key.toLowerCase().contains('active') ||
-                  key.toLowerCase().contains('enabled') ||
-                  key.toLowerCase().contains('status'))
-              .toList();
-
-          if (possibleFieldNames.isNotEmpty) {
-            debugPrint(
-                'Possible isActive field alternatives: $possibleFieldNames');
-            for (final field in possibleFieldNames) {
-              debugPrint('$field value: ${data[field]}');
-            }
-          } else {
-            debugPrint('No field similar to isActive found');
-          }
-        }
-
-        // Check for title field
-        if (data.containsKey('title')) {
-          debugPrint('title field exists: ${data['title']}');
-        } else if (data.containsKey('tittle')) {
-          // Common typo
-          debugPrint('tittle field exists instead of title: ${data['tittle']}');
-        }
-      } else {
-        debugPrint('No games found at all in the collection!');
-      }
-    } catch (e) {
-      debugPrint('Error in debug check: $e');
-    }
   }
 }

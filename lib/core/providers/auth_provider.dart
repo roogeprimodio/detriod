@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:frenzy/core/services/firebase_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -14,7 +13,27 @@ class AuthProvider extends ChangeNotifier {
     _auth.authStateChanges().listen((User? user) async {
       _user = user;
       if (user != null) {
-        _isAdmin = FirebaseService.isUserAdmin();
+        try {
+          // Get user data from Firestore
+          final doc = await _firestore.collection('users').doc(user.uid).get();
+          
+          // Check if user exists in Firestore
+          if (!doc.exists) {
+            // Create user document if it doesn't exist
+            await _firestore.collection('users').doc(user.uid).set({
+              'email': user.email,
+              'isAdmin': user.email?.toLowerCase().endsWith('@admin.com') ?? false,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+          }
+          
+          // Update admin status from Firestore
+          _isAdmin = doc.data()?['isAdmin'] ?? false;
+        } catch (e) {
+          debugPrint('Error getting user data: $e');
+          // Fallback to email check if Firestore fails
+          _isAdmin = user.email?.toLowerCase().endsWith('@admin.com') ?? false;
+        }
       } else {
         _isAdmin = false;
       }
@@ -31,12 +50,21 @@ class AuthProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      await FirebaseService.auth.signInWithEmailAndPassword(
+
+      final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+
+      // Update last login
+      if (userCredential.user != null) {
+        await _firestore.collection('users').doc(userCredential.user!.uid).update({
+          'lastLogin': FieldValue.serverTimestamp(),
+        });
+      }
+
     } catch (e) {
-      debugPrint('Error signing in: $e');
+      debugPrint('Sign in error: $e');
       rethrow;
     } finally {
       _isLoading = false;
@@ -48,25 +76,23 @@ class AuthProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      final userCredential =
-          await FirebaseService.auth.createUserWithEmailAndPassword(
+
+      final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      if (userCredential.user != null) {
-        await FirebaseService.firestore
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set({
-          'name': name,
-          'email': email,
-          'isAdmin': email.toLowerCase().endsWith("@admin.com"),
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      }
+      // Create user document
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'email': email,
+        'name': name,
+        'isAdmin': email.toLowerCase().endsWith('@admin.com'),
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastLogin': FieldValue.serverTimestamp(),
+      });
+
     } catch (e) {
-      debugPrint('Error signing up: $e');
+      debugPrint('Sign up error: $e');
       rethrow;
     } finally {
       _isLoading = false;
@@ -76,23 +102,12 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> signOut() async {
     try {
-      _isLoading = true;
+      await _auth.signOut();
+      _user = null;
+      _isAdmin = false;
       notifyListeners();
-      await FirebaseService.auth.signOut();
     } catch (e) {
-      debugPrint('Error signing out: $e');
-      rethrow;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> resetPassword(String email) async {
-    try {
-      await FirebaseService.auth.sendPasswordResetEmail(email: email);
-    } catch (e) {
-      debugPrint('Error resetting password: $e');
+      debugPrint('Sign out error: $e');
       rethrow;
     }
   }

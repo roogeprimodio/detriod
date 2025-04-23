@@ -7,12 +7,14 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
   final bool showThemeToggle;
+  final bool showBackButton;
 
   const CommonAppBar({
     super.key,
     required this.title,
     this.actions,
     this.showThemeToggle = true,
+    this.showBackButton = false,
   });
 
   @override
@@ -53,6 +55,7 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       title: Text(title),
       actions: appBarActions,
+      automaticallyImplyLeading: showBackButton,
     );
   }
 

@@ -17,13 +17,13 @@ class GamesListScreen extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('games')
             .where('isActive', isEqualTo: true)
-            .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
+            debugPrint('Error loading games: ${snapshot.error}');
             return Center(
               child: Text(
-                'Error: ${snapshot.error}',
+                'Error loading games. Please try again.',
                 style: const TextStyle(color: Colors.red),
               ),
             );
@@ -33,19 +33,34 @@ class GamesListScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          final allGames = snapshot.data?.docs ?? [];
+          debugPrint('Total games found: ${allGames.length}');
+
+          if (allGames.isEmpty) {
             return const Center(
-              child: Text('No games available'),
+              child: Text('No active games available'),
             );
           }
 
+          // Convert to Game objects and sort by creation date
+          final games = allGames.map((doc) {
+            try {
+              return Game.fromFirestore(doc);
+            } catch (e) {
+              debugPrint('Error parsing game ${doc.id}: $e');
+              return null;
+            }
+          }).where((game) => game != null).toList();
+
+          games.sort((a, b) => b!.createdAt.compareTo(a!.createdAt));
+
+          debugPrint('Parsed games: ${games.length}');
+
           return ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: snapshot.data!.docs.length,
+            itemCount: games.length,
             itemBuilder: (context, index) {
-              final doc = snapshot.data!.docs[index];
-              final game = Game.fromFirestore(doc);
-              return GameCard(game: game);
+              return GameCard(game: games[index]!);
             },
           );
         },

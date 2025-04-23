@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:frenzy/core/providers/auth_provider.dart';
 import 'package:frenzy/core/providers/theme_provider.dart';
-import 'package:frenzy/features/auth/presentation/screens/login_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});

@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/models/game.dart';
-import '../widgets/game_card.dart';
+import 'package:frenzy/core/widgets/common_app_bar.dart';
 
 class AdminGamesScreen extends StatelessWidget {
-  const AdminGamesScreen({Key? key}) : super(key: key);
+  const AdminGamesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Games'),
-        elevation: 0,
+      appBar: CommonAppBar(
+        title: 'Manage Games',
+        showBackButton: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -23,15 +22,11 @@ class AdminGamesScreen extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('games')
-            .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'Error: ${snapshot.error}',
-                style: const TextStyle(color: Colors.red),
-              ),
+              child: Text('Error: ${snapshot.error}'),
             );
           }
 
@@ -39,54 +34,88 @@ class AdminGamesScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          final docs = snapshot.data?.docs ?? [];
+          if (docs.isEmpty) {
             return const Center(
               child: Text('No games available. Add your first game!'),
             );
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: snapshot.data!.docs.length,
+            padding: const EdgeInsets.all(16),
+            itemCount: docs.length,
             itemBuilder: (context, index) {
-              final doc = snapshot.data!.docs[index];
+              final doc = docs[index];
               final game = Game.fromFirestore(doc);
               return Dismissible(
                 key: Key(game.id),
                 direction: DismissDirection.endToStart,
-                confirmDismiss: (direction) => _confirmDelete(context, game),
                 background: Container(
+                  color: Colors.red,
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 20),
-                  color: Colors.red,
-                  child: const Icon(
-                    Icons.delete,
-                    color: Colors.white,
-                  ),
+                  child: const Icon(Icons.delete, color: Colors.white),
                 ),
-                child: Stack(
-                  children: [
-                    GameCard(game: game),
-                    Positioned(
-                      top: 16,
-                      right: 24,
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              game.isActive ? Icons.visibility : Icons.visibility_off,
-                              color: game.isActive ? Colors.green : Colors.grey,
-                            ),
-                            onPressed: () => _toggleGameStatus(game),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _showEditGameDialog(context, game),
-                          ),
-                        ],
-                      ),
+                confirmDismiss: (direction) async {
+                  return await showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Delete Game'),
+                      content: Text('Are you sure you want to delete "${game.title}"?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
                     ),
-                  ],
+                  );
+                },
+                onDismissed: (direction) async {
+                  try {
+                    await FirebaseFirestore.instance
+                        .collection('games')
+                        .doc(game.id)
+                        .delete();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('${game.title} deleted successfully')),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error deleting game: $e')),
+                    );
+                  }
+                },
+                child: Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        title: Text(game.title),
+                        subtitle: Text(game.description),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                game.isActive ? Icons.visibility : Icons.visibility_off,
+                                color: game.isActive ? Colors.green : Colors.grey,
+                              ),
+                              onPressed: () => _toggleGameStatus(context, game),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _showEditGameDialog(context, game),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -96,139 +125,134 @@ class AdminGamesScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _toggleGameStatus(Game game) async {
+  Future<void> _toggleGameStatus(BuildContext context, Game game) async {
     try {
       await FirebaseFirestore.instance
           .collection('games')
           .doc(game.id)
           .update({'isActive': !game.isActive});
-    } catch (e) {
-      debugPrint('Error toggling game status: $e');
-    }
-  }
-
-  Future<bool> _confirmDelete(BuildContext context, Game game) async {
-    return await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Game'),
-        content: Text('Are you sure you want to delete "${game.title}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    ).then((confirmed) async {
-      if (confirmed == true) {
-        try {
-          await FirebaseFirestore.instance
-              .collection('games')
-              .doc(game.id)
-              .delete();
-          return true;
-        } catch (e) {
-          debugPrint('Error deleting game: $e');
-          return false;
-        }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${game.title} ${game.isActive ? 'disabled' : 'enabled'}')),
+        );
       }
-      return false;
-    });
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating game status: $e')),
+        );
+      }
+    }
   }
 
   void _showAddGameDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => const GameFormDialog(),
+      builder: (context) => const AddEditGameDialog(),
     );
   }
 
   void _showEditGameDialog(BuildContext context, Game game) {
     showDialog(
       context: context,
-      builder: (context) => GameFormDialog(game: game),
+      builder: (context) => AddEditGameDialog(game: game),
     );
   }
 }
 
-class GameFormDialog extends StatefulWidget {
+class AddEditGameDialog extends StatefulWidget {
   final Game? game;
 
-  const GameFormDialog({Key? key, this.game}) : super(key: key);
+  const AddEditGameDialog({super.key, this.game});
 
   @override
-  _GameFormDialogState createState() => _GameFormDialogState();
+  AddEditGameDialogState createState() => AddEditGameDialogState();
 }
 
-class _GameFormDialogState extends State<GameFormDialog> {
+class AddEditGameDialogState extends State<AddEditGameDialog> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _titleController;
-  late TextEditingController _descriptionController;
-  late TextEditingController _genreController;
-  late TextEditingController _imageUrlController;
-  late double _rating;
-  late bool _isActive;
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _imageUrlController = TextEditingController();
+  bool _isActive = true;
+  String _selectedCategory = 'Action';
+
+  static const List<String> _categories = [
+    'Action',
+    'Adventure',
+    'RPG',
+    'Strategy',
+    'Sports',
+    'Racing',
+    'Puzzle',
+    'Shooter',
+    'Fighting',
+    'Other'
+  ];
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.game?.title ?? '');
-    _descriptionController = TextEditingController(text: widget.game?.description ?? '');
-    _genreController = TextEditingController(text: widget.game?.genre ?? '');
-    _imageUrlController = TextEditingController(text: widget.game?.imageUrl ?? '');
-    _rating = widget.game?.rating ?? 0.0;
-    _isActive = widget.game?.isActive ?? true;
+    if (widget.game != null) {
+      _titleController.text = widget.game!.title;
+      _descriptionController.text = widget.game!.description;
+      _imageUrlController.text = widget.game!.imageUrl;
+      _isActive = widget.game!.isActive;
+      _selectedCategory = widget.game!.categories.isNotEmpty
+          ? widget.game!.categories.first
+          : _categories.first;
+    }
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _genreController.dispose();
     _imageUrlController.dispose();
     super.dispose();
   }
 
   Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        final gameData = {
-          'title': _titleController.text,
-          'description': _descriptionController.text,
-          'genre': _genreController.text,
-          'imageUrl': _imageUrlController.text,
-          'rating': _rating,
-          'isActive': _isActive,
-          'updatedAt': FieldValue.serverTimestamp(),
-        };
+    if (!_formKey.currentState!.validate()) return;
 
-        if (widget.game != null) {
-          // Update existing game
-          await FirebaseFirestore.instance
-              .collection('games')
-              .doc(widget.game!.id)
-              .update(gameData);
-        } else {
-          // Create new game
-          gameData['createdAt'] = FieldValue.serverTimestamp();
-          gameData['createdBy'] = 'admin';
-          gameData['releaseDate'] = FieldValue.serverTimestamp();
-          
-          await FirebaseFirestore.instance
-              .collection('games')
-              .add(gameData);
-        }
+    try {
+      final gameData = {
+        'title': _titleController.text.trim(),
+        'description': _descriptionController.text.trim(),
+        'imageUrl': _imageUrlController.text.trim().isEmpty
+            ? 'https://via.placeholder.com/300x200?text=Game'
+            : _imageUrlController.text.trim(),
+        'categories': [_selectedCategory],
+        'platforms': ['All'],
+        'isActive': _isActive,
+        'rating': 0.0,
+        'totalRatings': 0,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
 
-        if (mounted) Navigator.pop(context);
-      } catch (e) {
+      if (widget.game != null) {
+        await FirebaseFirestore.instance
+            .collection('games')
+            .doc(widget.game!.id)
+            .update(gameData);
+      } else {
+        gameData['createdAt'] = FieldValue.serverTimestamp();
+        gameData['createdBy'] = 'admin';
+        await FirebaseFirestore.instance.collection('games').add(gameData);
+      }
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.game != null
+                ? 'Game updated successfully'
+                : 'Game added successfully'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),
         );
@@ -245,42 +269,57 @@ class _GameFormDialogState extends State<GameFormDialog> {
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Title'),
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  border: OutlineInputBorder(),
+                ),
                 validator: (value) =>
-                    value?.isEmpty == true ? 'Title is required' : null,
-              ),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
-                maxLines: 3,
-              ),
-              TextFormField(
-                controller: _genreController,
-                decoration: const InputDecoration(labelText: 'Genre'),
-              ),
-              TextFormField(
-                controller: _imageUrlController,
-                decoration: const InputDecoration(labelText: 'Image URL'),
+                    value?.trim().isEmpty == true ? 'Title is required' : null,
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Text('Rating: '),
-                  Expanded(
-                    child: Slider(
-                      value: _rating,
-                      min: 0,
-                      max: 5,
-                      divisions: 10,
-                      label: _rating.toStringAsFixed(1),
-                      onChanged: (value) => setState(() => _rating = value),
-                    ),
-                  ),
-                ],
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+                validator: (value) =>
+                    value?.trim().isEmpty == true ? 'Description is required' : null,
               ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedCategory,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  border: OutlineInputBorder(),
+                ),
+                items: _categories.map((category) {
+                  return DropdownMenuItem(
+                    value: category,
+                    child: Text(category),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selectedCategory = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _imageUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'Image URL (Optional)',
+                  hintText: 'Leave empty for default image',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
               SwitchListTile(
                 title: const Text('Active'),
                 value: _isActive,
