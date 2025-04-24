@@ -13,6 +13,7 @@ class Match {
   final String createdBy;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final double entryFee;
 
   Match({
     required this.id,
@@ -27,6 +28,7 @@ class Match {
     required this.createdBy,
     required this.createdAt,
     this.updatedAt,
+    required this.entryFee,
   });
 
   bool get isFull => currentParticipants >= maxParticipants;
@@ -45,27 +47,45 @@ class Match {
       'createdBy': createdBy,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'entryFee': entryFee,
     };
+  }
+
+  factory Match.fromMap(Map<String, dynamic> map) {
+    // Handle null timestamps with default values
+    final startTime = map['startTime'] != null 
+        ? (map['startTime'] as Timestamp).toDate()
+        : DateTime.now().add(const Duration(days: 1));
+    
+    final createdAt = map['createdAt'] != null 
+        ? (map['createdAt'] as Timestamp).toDate()
+        : DateTime.now();
+    
+    final updatedAt = map['updatedAt'] != null 
+        ? (map['updatedAt'] as Timestamp).toDate()
+        : null;
+
+    return Match(
+      id: map['id'] ?? '',
+      gameId: map['gameId'] ?? '',
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      startTime: startTime,
+      maxParticipants: map['maxParticipants']?.toInt() ?? 0,
+      currentParticipants: map['currentParticipants']?.toInt() ?? 0,
+      status: map['status'] ?? 'upcoming',
+      participants: List<Map<String, dynamic>>.from(map['participants'] ?? []),
+      createdBy: map['createdBy'] ?? '',
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      entryFee: (map['entryFee'] ?? 0.0).toDouble(),
+    );
   }
 
   factory Match.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    return Match(
-      id: doc.id,
-      gameId: data['gameId'] ?? '',
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      startTime: (data['startTime'] as Timestamp).toDate(),
-      maxParticipants: data['maxParticipants'] ?? 0,
-      currentParticipants: data['currentParticipants'] ?? 0,
-      status: data['status'] ?? 'upcoming',
-      participants: List<Map<String, dynamic>>.from(data['participants'] ?? []),
-      createdBy: data['createdBy'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: data['updatedAt'] != null
-          ? (data['updatedAt'] as Timestamp).toDate()
-          : null,
-    );
+    data['id'] = doc.id; // Ensure the document ID is included
+    return Match.fromMap(data);
   }
 
   Match copyWith({
@@ -81,6 +101,7 @@ class Match {
     String? createdBy,
     DateTime? createdAt,
     DateTime? updatedAt,
+    double? entryFee,
   }) {
     return Match(
       id: id ?? this.id,
@@ -95,6 +116,7 @@ class Match {
       createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      entryFee: entryFee ?? this.entryFee,
     );
   }
 }

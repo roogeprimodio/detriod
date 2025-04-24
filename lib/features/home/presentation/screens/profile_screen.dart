@@ -1,315 +1,303 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:frenzy/core/providers/theme_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../providers/user_profile_provider.dart';
 import 'package:frenzy/core/providers/auth_provider.dart';
-import 'package:frenzy/features/home/presentation/providers/user_profile_provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:frenzy/core/widgets/common_app_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final String userId;
+  final String email;
+
+  const ProfileScreen({Key? key, required this.userId, required this.email}) : super(key: key);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _formKey = GlobalKey<FormState>();
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'upcoming':
+        return Colors.blue;
+      case 'live':
+        return Colors.green;
+      case 'completed':
+        return Colors.grey;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _bioController = TextEditingController();
   bool _isEditing = false;
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<UserProfileProvider>();
+      provider.listenToUserProfile(widget.userId);
+    });
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     _bioController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadProfile() async {
-    final user = context.read<AuthProvider>().user;
-    if (user != null) {
-      await context.read<UserProfileProvider>().loadProfile(user.uid);
-      final profile = context.read<UserProfileProvider>().profile;
-      if (profile != null) {
-        _nameController.text = profile.name;
-        _bioController.text = profile.bio;
-      }
-    }
-  }
-
-  Future<void> _updateProfile() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final user = context.read<AuthProvider>().user;
-    if (user == null) return;
-
-    await context.read<UserProfileProvider>().updateProfile(
-          name: _nameController.text.trim(),
-          bio: _bioController.text.trim(),
-        );
-
-    if (mounted) {
-      setState(() => _isEditing = false);
-    }
+  void _updateControllers(profile) {
+    _nameController.text = profile.name;
+    _usernameController.text = profile.username;
+    _bioController.text = profile.bio;
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-    final isDark = themeProvider.isDarkMode;
+    final provider = context.watch<UserProfileProvider>();
+    final profile = provider.profile;
+    final isLoading = provider.isLoading;
     final colorScheme = Theme.of(context).colorScheme;
-    final user = context.watch<AuthProvider>().user;
-    final profileProvider = context.watch<UserProfileProvider>();
-    final profile = profileProvider.profile;
-    final isLoading = profileProvider.isLoading;
+
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (profile == null) {
+      return Scaffold(
+        body: Center(
+          child: ElevatedButton(
+            onPressed: () {
+              provider.createUserProfile(widget.userId, widget.email);
+            },
+            child: const Text('Create Profile'),
+          ),
+        ),
+      );
+    }
+
+    // Update controllers when profile changes
+    if (!_isEditing) {
+      _updateControllers(profile);
+    }
 
     return Scaffold(
-      appBar: CommonAppBar(
-        title: 'Profile',
-        showThemeToggle: false, // Theme toggle is in HomeScreen
-        actions: [
-          if (!_isEditing)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => setState(() => _isEditing = true),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () {
-                setState(() {
-                  _isEditing = false;
-                  _nameController.text = profile?.name ?? '';
-                  _bioController.text = profile?.bio ?? '';
-                });
-              },
-            ),
-        ],
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadProfile,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  children: [
-                    // Profile Header
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: const Duration(milliseconds: 800),
-                      curve: Curves.easeOutBack,
-                      builder: (context, value, child) {
-                        return Transform.scale(
-                          scale: value,
-                          child: child,
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              colorScheme.primary.withOpacity(0.8),
-                              colorScheme.primary.withOpacity(0.4),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            // Profile Image
-                            Container(
-                              width: 120,
-                              height: 120,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: colorScheme.onPrimary.withOpacity(0.2),
-                                  width: 4,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: colorScheme.shadow.withOpacity(0.2),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 5),
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child: CachedNetworkImage(
-                                  imageUrl: profile?.profileImageUrl ??
-                                      'https://drive.google.com/uc?export=view&id=YOUR_DEFAULT_PROFILE_IMAGE_ID',
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) => Container(
-                                    color: colorScheme.primary.withOpacity(0.1),
-                                    child: const Center(
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  ),
-                                  errorWidget: (context, url, error) =>
-                                      Container(
-                                    color: colorScheme.primary.withOpacity(0.1),
-                                    child: Icon(
-                                      Icons.person,
-                                      size: 48,
-                                      color: colorScheme.primary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // User Email
-                            Text(
-                              user?.email ?? 'User',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: colorScheme.onPrimary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Profile Form
-                    Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Name Field
-                            TweenAnimationBuilder<double>(
-                              tween: Tween(begin: 0.0, end: 1.0),
-                              duration: const Duration(milliseconds: 600),
-                              curve: Curves.easeOut,
-                              builder: (context, value, child) {
-                                return Transform.translate(
-                                  offset: Offset(0, 20 * (1 - value)),
-                                  child: Opacity(
-                                    opacity: value,
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: TextFormField(
-                                controller: _nameController,
-                                enabled: _isEditing,
-                                decoration: InputDecoration(
-                                  labelText: 'Name',
-                                  prefixIcon: Icon(Icons.person_outline,
-                                      color: colorScheme.primary),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                validator: (value) {
-                                  if (_isEditing &&
-                                      (value == null || value.isEmpty)) {
-                                    return 'Please enter your name';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Bio Field
-                            TweenAnimationBuilder<double>(
-                              tween: Tween(begin: 0.0, end: 1.0),
-                              duration: const Duration(milliseconds: 800),
-                              curve: Curves.easeOut,
-                              builder: (context, value, child) {
-                                return Transform.translate(
-                                  offset: Offset(0, 20 * (1 - value)),
-                                  child: Opacity(
-                                    opacity: value,
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: TextFormField(
-                                controller: _bioController,
-                                enabled: _isEditing,
-                                maxLines: 3,
-                                decoration: InputDecoration(
-                                  labelText: 'Bio',
-                                  prefixIcon: Icon(Icons.description_outlined,
-                                      color: colorScheme.primary),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 30),
-
-                            // Save Button
-                            if (_isEditing)
-                              TweenAnimationBuilder<double>(
-                                tween: Tween(begin: 0.0, end: 1.0),
-                                duration: const Duration(milliseconds: 1000),
-                                curve: Curves.easeOut,
-                                builder: (context, value, child) {
-                                  return Transform.scale(
-                                    scale: value,
-                                    child: child,
-                                  );
-                                },
-                                child: SizedBox(
-                                  height: 56,
-                                  child: ElevatedButton(
-                                    onPressed:
-                                        isLoading ? null : _updateProfile,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: colorScheme.primary,
-                                      foregroundColor: colorScheme.onPrimary,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      elevation: 5,
-                                    ),
-                                    child: isLoading
-                                        ? const SizedBox(
-                                            height: 24,
-                                            width: 24,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                      Colors.white),
-                                            ),
-                                          )
-                                        : const Text(
-                                            'Save Changes',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top row with edit and logout buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (profile.isAdmin)
+                  IconButton(
+                    icon: const Icon(Icons.admin_panel_settings),
+                    onPressed: () {
+                      // TODO: Navigate to admin settings
+                    },
+                  ),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(_isEditing ? Icons.close : Icons.edit),
+                  onPressed: () {
+                    setState(() {
+                      if (_isEditing) {
+                        _updateControllers(profile);
+                      }
+                      _isEditing = !_isEditing;
+                    });
+                  },
                 ),
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  onPressed: () {
+                    context.read<AuthProvider>().signOut();
+                  },
+                ),
+              ],
+            ),
+            Center(
+              child: Stack(
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: colorScheme.primary.withOpacity(0.2),
+                        width: 4,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 48,
+                      backgroundImage: NetworkImage(profile.profileImageUrl),
+                    ),
+                  ),
+                  if (_isEditing)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.camera_alt,
+                            color: colorScheme.onPrimary,
+                            size: 20,
+                          ),
+                          onPressed: () async {
+                            final picker = ImagePicker();
+                            final image = await picker.pickImage(
+                              source: ImageSource.gallery,
+                              maxWidth: 512,
+                              maxHeight: 512,
+                              imageQuality: 75,
+                            );
+                            
+                            if (image != null) {
+                              await provider.updateProfileImage(widget.userId, image.path);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
+            const SizedBox(height: 24),
+            TextFormField(
+              controller: _nameController,
+              enabled: _isEditing,
+              decoration: InputDecoration(
+                labelText: 'Name',
+                border: const OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person_outline, color: colorScheme.primary),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _usernameController,
+              enabled: _isEditing,
+              decoration: InputDecoration(
+                labelText: 'Username',
+                border: const OutlineInputBorder(),
+                prefixIcon: Icon(Icons.alternate_email, color: colorScheme.primary),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _bioController,
+              enabled: _isEditing,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: 'Bio',
+                border: const OutlineInputBorder(),
+                prefixIcon: Icon(Icons.description_outlined, color: colorScheme.primary),
+              ),
+            ),
+            if (_isEditing) ...[
+              const SizedBox(height: 24),
+              Center(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    provider.updateProfile(
+                      userId: widget.userId,
+                      name: _nameController.text,
+                      username: _usernameController.text,
+                      bio: _bioController.text,
+                    );
+                    setState(() => _isEditing = false);
+                  },
+                  icon: const Icon(Icons.save),
+                  label: const Text('Save Changes'),
+                ),
+              ),
+            ],
+            const SizedBox(height: 32),
+            const Row(
+              children: [
+                Icon(Icons.sports_esports),
+                SizedBox(width: 8),
+                Text(
+                  'Registered Matches',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('matches')
+                  .where('registeredUsers', arrayContains: widget.userId)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final matches = snapshot.data!.docs;
+
+                if (matches.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    child: const Text('No registered matches yet'),
+                  );
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: matches.length,
+                  itemBuilder: (context, index) {
+                    final match = matches[index].data() as Map<String, dynamic>;
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: ListTile(
+                        title: Text(match['title'] ?? 'Untitled Match'),
+                        subtitle: Text(
+                          'Game: ${match['gameName'] ?? 'Unknown'} • '
+                          'Date: ${match['date'] != null ? (match['date'] as Timestamp).toDate().toString().split(' ')[0] : 'TBD'}',
+                        ),
+                        trailing: match['status'] != null
+                            ? Chip(
+                                label: Text(
+                                  match['status'],
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                                backgroundColor: _getStatusColor(match['status']),
+                              )
+                            : null,
+                        onTap: () {
+                          // TODO: Navigate to match details
+                        },
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

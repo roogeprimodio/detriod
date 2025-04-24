@@ -44,12 +44,12 @@ class GameRepository {
         .update({'isActive': false});
   }
 
-  // Get games by genre
-  Stream<List<Game>> getGamesByGenre(String genre) {
+  // Get games by category
+  Stream<List<Game>> getGamesByCategory(String category) {
     return _firestore
         .collection(_collection)
         .where('isActive', isEqualTo: true)
-        .where('genre', isEqualTo: genre)
+        .where('categories', arrayContains: category)
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => Game.fromFirestore(doc)).toList());
@@ -72,7 +72,7 @@ class GameRepository {
         .collection(_collection)
         .where('isActive', isEqualTo: true)
         .where('title', isGreaterThanOrEqualTo: query)
-        .where('title', isLessThanOrEqualTo: query + '\uf8ff')
+        .where('title', isLessThanOrEqualTo: '$query\uf8ff')
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => Game.fromFirestore(doc)).toList());

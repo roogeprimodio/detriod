@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:frenzy/core/providers/theme_provider.dart';
 import 'package:frenzy/core/widgets/common_app_bar.dart';
 import 'package:frenzy/core/widgets/common_bottom_nav.dart';
-// Import placeholder screens (create these files if they don't exist)
+import 'package:frenzy/core/providers/auth_provider.dart';
 import 'package:frenzy/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:frenzy/features/home/presentation/screens/live_view_screen.dart';
 import 'package:frenzy/features/home/presentation/screens/profile_screen.dart';
+import 'package:frenzy/features/home/presentation/widgets/custom_app_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,12 +20,16 @@ class _HomeScreenState extends State<HomeScreen>
   int _currentIndex = 0;
   late TabController _tabController;
 
-  // Define the screens for the tabs
-  final List<Widget> _screens = [
-    const DashboardScreen(), // Screen containing the game grid
-    const LiveViewScreen(), // Placeholder for Live View
-    const ProfileScreen(), // Placeholder for Profile
-  ];
+  late List<Widget> _screens;
+
+  void _initializeScreens(BuildContext context) {
+    final authProvider = context.read<AuthProvider>();
+    _screens = [
+      const DashboardScreen(), // Screen containing the game grid
+      const LiveViewScreen(), // Placeholder for Live View
+      ProfileScreen(userId: authProvider.user?.uid ?? '', email: authProvider.user?.email ?? ''),
+    ];
+  }
 
   // Define the items for the bottom navigation
   final List<BottomNavigationBarItem> _navItems = const [
@@ -49,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _screens.length, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
         setState(() {
@@ -85,28 +89,17 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Theme provider is available via CommonAppBar/CommonBottomNav contexts
+    // Initialize screens with auth context
+    _initializeScreens(context);
 
     return Scaffold(
-      // Use CommonAppBar with dynamic title
-      appBar: CommonAppBar(
-        title: _getTitleForIndex(_currentIndex),
-        // Add any specific actions for the home screen if needed
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none), // Example action
-            onPressed: () {
-              // TODO: Implement notifications action
-            },
-          ),
-        ],
+      appBar: const CustomAppBar(
+        title: 'Home',
       ),
-      // Use TabBarView for the main content
       body: TabBarView(
         controller: _tabController,
         children: _screens,
       ),
-      // Use CommonBottomNav
       bottomNavigationBar: CommonBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../screens/admin_games_screen.dart';
-import '../screens/admin_matches_screen.dart';
+import '../screens/game_management_screen.dart';
+import '../screens/match_management_screen.dart';
+import '../screens/user_management_screen.dart';
+import '../screens/reports_screen.dart';
 
 class AdminNavDrawer extends StatelessWidget {
   const AdminNavDrawer({super.key});
@@ -46,26 +48,51 @@ class AdminNavDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.games),
-            title: const Text('Manage Games'),
+            title: const Text('Game Management'),
             onTap: () {
-              Navigator.pop(context);
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const AdminGamesScreen(),
+                  builder: (context) => const GameManagementScreen(),
                 ),
               );
             },
           ),
           ListTile(
             leading: const Icon(Icons.emoji_events),
-            title: const Text('Manage Matches'),
+            title: const Text('Match Management'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const AdminMatchesScreen(),
+                  builder: (context) => const MatchManagementScreen(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.people),
+            title: const Text('Manage Users'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const UserManagementScreen(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.analytics),
+            title: const Text('Reports & Analytics'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ReportsScreen(),
                 ),
               );
             },

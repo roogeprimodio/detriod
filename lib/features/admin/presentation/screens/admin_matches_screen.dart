@@ -1,450 +1,260 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
-import '../../../games/domain/models/match.dart';
-import '../../../games/domain/models/game.dart';
-import '../widgets/admin_nav_drawer.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:frenzy/core/widgets/common_app_bar.dart';
 
-class AdminMatchesScreen extends StatelessWidget {
+class AdminMatchesScreen extends StatefulWidget {
   const AdminMatchesScreen({super.key});
+
+  @override
+  State<AdminMatchesScreen> createState() => _AdminMatchesScreenState();
+}
+
+class _AdminMatchesScreenState extends State<AdminMatchesScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _maxParticipantsController = TextEditingController();
+  final _entryFeeController = TextEditingController();
+  String? _selectedGameId;
+  DateTime _selectedDate = DateTime.now();
+  TimeOfDay _selectedTime = TimeOfDay.now();
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _maxParticipantsController.dispose();
+    _entryFeeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  Future<void> _selectTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+    );
+    if (picked != null && picked != _selectedTime) {
+      setState(() {
+        _selectedTime = picked;
+      });
+    }
+  }
+
+  Future<void> _createMatch() async {
+    if (!_formKey.currentState!.validate() || _selectedGameId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields')),
+      );
+      return;
+    }
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final startTime = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _selectedTime.hour,
+        _selectedTime.minute,
+      );
+
+      final matchData = {
+        'gameId': _selectedGameId,
+        'title': _titleController.text,
+        'description': _descriptionController.text,
+        'startTime': Timestamp.fromDate(startTime),
+        'maxParticipants': int.parse(_maxParticipantsController.text),
+        'currentParticipants': 0,
+        'status': 'upcoming',
+        'participants': [],
+        'entryFee': double.parse(_entryFeeController.text),
+        'createdBy': user.uid,
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      await FirebaseFirestore.instance.collection('matches').add(matchData);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Match created successfully')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      debugPrint('Error creating match: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating match: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Matches'),
+      appBar: const CommonAppBar(
+        title: 'Create Match',
+        showBackButton: true,
       ),
-      drawer: const AdminNavDrawer(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showMatchDialog(context);
-        },
-        child: const Icon(Icons.add),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('matches')
-            .orderBy('startTime', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
-          }
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('games')
+                    .where('isActive', isEqualTo: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+                  if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  }
 
-          final matches = snapshot.data?.docs
-                  .map((doc) => Match.fromFirestore(doc))
-                  .toList() ??
-              [];
+                  final games = snapshot.data?.docs ?? [];
+                  if (games.isEmpty) {
+                    return const Text('No active games available');
+                  }
 
-          if (matches.isEmpty) {
-            return const Center(
-              child: Text('No matches found. Create your first match!'),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: matches.length,
-            itemBuilder: (context, index) {
-              final match = matches[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ListTile(
-                  title: Text(match.title),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(match.description),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Start: ${DateFormat('MMM dd, yyyy - hh:mm a').format(match.startTime)}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      Row(
-                        children: [
-                          const Icon(Icons.person, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${match.currentParticipants}/${match.maxParticipants}',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          const SizedBox(width: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(match.status),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              match.status,
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () {
-                          _showMatchDialog(context, match);
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () {
-                          _showDeleteConfirmation(context, match);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'upcoming':
-        return Colors.blue;
-      case 'live':
-        return Colors.green;
-      case 'completed':
-        return Colors.grey;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.orange;
-    }
-  }
-
-  void _showDeleteConfirmation(BuildContext context, Match match) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: Text('Are you sure you want to delete "${match.title}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
-          ),
-          TextButton(
-            onPressed: () {
-              _deleteMatch(match.id);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${match.title} deleted')),
-              );
-            },
-            child: const Text('DELETE'),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteMatch(String matchId) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('matches')
-          .doc(matchId)
-          .delete();
-    } catch (e) {
-      debugPrint('Error deleting match: $e');
-    }
-  }
-
-  void _showMatchDialog(BuildContext context, [Match? existingMatch]) {
-    final titleController =
-        TextEditingController(text: existingMatch?.title ?? '');
-    final descriptionController =
-        TextEditingController(text: existingMatch?.description ?? '');
-    final maxParticipantsController = TextEditingController(
-        text: existingMatch != null
-            ? existingMatch.maxParticipants.toString()
-            : '10');
-
-    DateTime selectedStartTime =
-        existingMatch?.startTime ?? DateTime.now().add(const Duration(days: 1));
-    String selectedStatus = existingMatch?.status ?? 'Upcoming';
-    String? selectedGameId = existingMatch?.gameId;
-    final formKey = GlobalKey<FormState>();
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(existingMatch == null ? 'Add New Match' : 'Edit Match'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FutureBuilder<QuerySnapshot>(
-                    future: FirebaseFirestore.instance
-                        .collection('games')
-                        .where('isActive', isEqualTo: true)
-                        .get(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const CircularProgressIndicator();
-                      }
-
-                      if (snapshot.hasError) {
-                        return Text('Error: ${snapshot.error}');
-                      }
-
-                      final games = snapshot.data?.docs
-                              .map((doc) => Game.fromFirestore(doc))
-                              .toList() ??
-                          [];
-
-                      if (games.isEmpty) {
-                        return const Text(
-                            'No active games available. Please add a game first.');
-                      }
-
-                      // Set default game if none selected
-                      if (selectedGameId == null && games.isNotEmpty) {
-                        selectedGameId = games.first.id;
-                      }
-
-                      return DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(labelText: 'Game'),
-                        value: selectedGameId,
-                        items: games.map((game) {
-                          return DropdownMenuItem<String>(
-                            value: game.id,
-                            child: Text(game.title),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedGameId = value;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a game';
-                          }
-                          return null;
-                        },
-                      );
-                    },
-                  ),
-                  TextFormField(
-                    controller: titleController,
-                    decoration: const InputDecoration(labelText: 'Title'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a title';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: descriptionController,
-                    decoration: const InputDecoration(labelText: 'Description'),
-                    maxLines: 3,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a description';
-                      }
-                      return null;
-                    },
-                  ),
-                  ListTile(
-                    title: const Text('Start Time'),
-                    subtitle: Text(
-                      DateFormat('MMM dd, yyyy - hh:mm a')
-                          .format(selectedStartTime),
+                  return DropdownButtonFormField<String>(
+                    value: _selectedGameId,
+                    decoration: const InputDecoration(
+                      labelText: 'Game',
+                      hintText: 'Select a game',
                     ),
-                    onTap: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: selectedStartTime,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-
-                      if (date != null) {
-                        final time = await showTimePicker(
-                          context: context,
-                          initialTime:
-                              TimeOfDay.fromDateTime(selectedStartTime),
-                        );
-
-                        if (time != null) {
-                          setState(() {
-                            selectedStartTime = DateTime(
-                              date.year,
-                              date.month,
-                              date.day,
-                              time.hour,
-                              time.minute,
-                            );
-                          });
-                        }
-                      }
-                    },
-                  ),
-                  TextFormField(
-                    controller: maxParticipantsController,
-                    decoration:
-                        const InputDecoration(labelText: 'Max Participants'),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter max participants';
-                      }
-                      final count = int.tryParse(value);
-                      if (count == null || count < 2) {
-                        return 'Must be at least 2 participants';
-                      }
-                      return null;
-                    },
-                  ),
-                  DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(labelText: 'Status'),
-                    value: selectedStatus,
-                    items: ['Upcoming', 'Live', 'Completed', 'Cancelled']
-                        .map((status) {
-                      return DropdownMenuItem<String>(
-                        value: status,
-                        child: Text(status),
+                    items: games.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      return DropdownMenuItem(
+                        value: doc.id,
+                        child: Text(data['title'] ?? 'Untitled Game'),
                       );
                     }).toList(),
+                    validator: (value) =>
+                        value == null ? 'Please select a game' : null,
                     onChanged: (value) {
-                      setState(() {
-                        selectedStatus = value!;
-                      });
+                      setState(() => _selectedGameId = value);
                     },
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  hintText: 'Enter match title',
+                ),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Title is required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  hintText: 'Enter match description',
+                ),
+                maxLines: 3,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Description is required' : null,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => _selectDate(context),
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text(
+                        'Date: ${_selectedDate.year}-${_selectedDate.month}-${_selectedDate.day}',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => _selectTime(context),
+                      icon: const Icon(Icons.access_time),
+                      label: Text(
+                        'Time: ${_selectedTime.format(context)}',
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('CANCEL'),
-            ),
-            TextButton(
-              onPressed: () {
-                if (formKey.currentState!.validate() &&
-                    selectedGameId != null) {
-                  final title = titleController.text.trim();
-                  final description = descriptionController.text.trim();
-                  final maxParticipants =
-                      int.parse(maxParticipantsController.text.trim());
-
-                  if (existingMatch == null) {
-                    _addMatch(
-                      gameId: selectedGameId!,
-                      title: title,
-                      description: description,
-                      startTime: selectedStartTime,
-                      maxParticipants: maxParticipants,
-                      status: selectedStatus,
-                    );
-                  } else {
-                    _updateMatch(
-                      existingMatch.id,
-                      gameId: selectedGameId!,
-                      title: title,
-                      description: description,
-                      startTime: selectedStartTime,
-                      maxParticipants: maxParticipants,
-                      status: selectedStatus,
-                      currentParticipants: existingMatch.currentParticipants,
-                    );
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _maxParticipantsController,
+                decoration: const InputDecoration(
+                  labelText: 'Max Participants',
+                  hintText: 'Enter maximum number of participants',
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value?.isEmpty ?? true) {
+                    return 'Max participants is required';
                   }
-                  Navigator.pop(context);
-                }
-              },
-              child: Text(existingMatch == null ? 'ADD' : 'UPDATE'),
-            ),
-          ],
+                  final number = int.tryParse(value!);
+                  if (number == null || number < 2) {
+                    return 'Must be at least 2';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _entryFeeController,
+                decoration: const InputDecoration(
+                  labelText: 'Entry Fee',
+                  hintText: 'Enter entry fee (0 for free)',
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value?.isEmpty ?? true) {
+                    return 'Entry fee is required';
+                  }
+                  final number = double.tryParse(value!);
+                  if (number == null || number < 0) {
+                    return 'Must be 0 or greater';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _createMatch,
+                child: const Text('Create Match'),
+              ),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  Future<void> _addMatch({
-    required String gameId,
-    required String title,
-    required String description,
-    required DateTime startTime,
-    required int maxParticipants,
-    required String status,
-  }) async {
-    try {
-      final now = DateTime.now();
-      final match = Match(
-        id: '',
-        gameId: gameId,
-        title: title,
-        description: description,
-        startTime: startTime,
-        maxParticipants: maxParticipants,
-        currentParticipants: 0,
-        status: status,
-        participants: const [],
-        createdBy: 'admin',
-        createdAt: now,
-      );
-
-      final docRef = FirebaseFirestore.instance.collection('matches').doc();
-      final matchWithId = match.copyWith(id: docRef.id);
-      await docRef.set(matchWithId.toMap());
-    } catch (e) {
-      debugPrint('Error adding match: $e');
-    }
-  }
-
-  Future<void> _updateMatch(
-    String id, {
-    required String gameId,
-    required String title,
-    required String description,
-    required DateTime startTime,
-    required int maxParticipants,
-    required String status,
-    required int currentParticipants,
-  }) async {
-    try {
-      await FirebaseFirestore.instance.collection('matches').doc(id).update({
-        'gameId': gameId,
-        'title': title,
-        'description': description,
-        'startTime': startTime,
-        'maxParticipants': maxParticipants,
-        'status': status,
-        'currentParticipants': currentParticipants,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      debugPrint('Error updating match: $e');
-    }
   }
 }
