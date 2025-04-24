@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../screens/admin_games_screen.dart';
-import '../screens/admin_matches_screen.dart';
+import '../screens/game_management_screen.dart';
+import '../screens/match_management_screen.dart';
+import '../screens/reports_screen.dart';
 
 class AdminQuickActions extends StatelessWidget {
   const AdminQuickActions({super.key});
@@ -34,7 +35,7 @@ class AdminQuickActions extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const AdminGamesScreen(),
+                    builder: (context) => const GameManagementScreen(),
                   ),
                 );
               },
@@ -48,7 +49,7 @@ class AdminQuickActions extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const AdminMatchesScreen(),
+                    builder: (context) => const MatchManagementScreen(),
                   ),
                 );
               },
@@ -59,16 +60,12 @@ class AdminQuickActions extends StatelessWidget {
               Icons.assessment,
               Colors.purple,
               () {
-                // TODO: Implement reports view
-              },
-            ),
-            _buildActionCard(
-              context,
-              'Manage Users',
-              Icons.people,
-              Colors.green,
-              () {
-                // TODO: Implement user management
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ReportsScreen(),
+                  ),
+                );
               },
             ),
           ],
@@ -77,28 +74,43 @@ class AdminQuickActions extends StatelessWidget {
     );
   }
 
-  Widget _buildActionCard(BuildContext context, String title, IconData icon,
-      Color color, VoidCallback onTap) {
+  Widget _buildActionCard(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Card(
-      elevation: 4,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 48,
-                color: color,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  size: 32,
+                  color: color,
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
