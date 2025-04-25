@@ -1,17 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
     // Helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
     
-    function isAdmin() {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    }
-
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
@@ -21,35 +21,28 @@ service cloud.firestore {
         (matchData.registeredUsers.hasAny([request.auth.uid]));
     }
 
-    // Users Collection
+    // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false; // Prevent user deletion
+    }
+    
+    // Games collection
+    match /games/{gameId} {
+      allow read: if true; // Anyone can read games
+      allow create: if isAdmin();
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
-
-    // Games Collection
-    match /games/{gameId} {
-      allow read: if true;
-      allow create, update: if isAdmin();
-      allow delete: if isAdmin() && 
-        !exists(/databases/$(database)/documents/matches/{matchId}) &&
-        !('true' in get(/databases/$(database)/documents/matches/{matchId}).data.isActive &&
-          gameId == get(/databases/$(database)/documents/matches/{matchId}).data.gameId);
-    }
-
-    // Matches Collection
+    
+    // Matches collection
     match /matches/{matchId} {
-      allow read: if true;
+      allow read: if true; // Anyone can read matches
       allow create: if isAdmin();
-      allow update: if isAuthenticated() && (
-        isAdmin() ||
-        (isMatchParticipant(resource.data) && 
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['registeredUsers', 'currentParticipants']))
-      );
-      allow delete: if isAdmin() && resource.data.status != 'live';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // Match Registrations Collection
@@ -61,7 +54,7 @@ service cloud.firestore {
         isAdmin() || 
         (resource.data.userId == request.auth.uid && 
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['inGameName', 'platform', 'teamName']))
+            .hasOnly(["inGameName", "platform", "teamName"]))
       );
       allow delete: if isAdmin() || 
         (isAuthenticated() && resource.data.userId == request.auth.uid);
@@ -69,14 +62,25 @@ service cloud.firestore {
 
     // Notifications Collection
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && 
-        resource.data.userId == request.auth.uid;
-      allow create: if isAdmin();
-      allow update: if isAuthenticated() && 
-        resource.data.userId == request.auth.uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
-      allow delete: if isAdmin() || 
-        (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow read: if isAuthenticated() && (
+        resource.data.targetUserId == request.auth.uid || 
+        resource.data.targetUserId == "global"
+      );
+      
+      allow create: if isAdmin() || (
+        isAuthenticated() && (
+          request.resource.data.targetUserId == request.auth.uid ||
+          request.resource.data.targetUserId == "global"
+        )
+      );
+      
+      allow update: if isAuthenticated() && (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["readBy"]) &&
+        request.resource.data.readBy.hasAll(resource.data.readBy) &&
+        request.resource.data.readBy.removeAll(resource.data.readBy).hasOnly([request.auth.uid])
+      );
+      
+      allow delete: if isAdmin();
     }
 
     // Transactions Collection
@@ -86,12 +90,6 @@ service cloud.firestore {
       allow create: if isAdmin();
       allow update: if isAdmin();
       allow delete: if false; // Never allow transaction deletion
-    }
-    
-    // Users collection
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isOwner(userId) || isAdmin();
     }
     
     // Events collection

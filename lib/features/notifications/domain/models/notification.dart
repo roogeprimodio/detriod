@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 enum NotificationType {
   gameAdded,
@@ -18,6 +20,11 @@ class Notification {
   final String? matchId;
   final bool isRead;
   final DateTime createdAt;
+  final String? targetUserId;
+  final List<String> readBy;
+  final String status;
+  final Color backgroundColor;
+  final Color textColor;
   final Map<String, dynamic>? additionalData;
 
   Notification({
@@ -29,37 +36,54 @@ class Notification {
     this.matchId,
     this.isRead = false,
     required this.createdAt,
+    this.targetUserId,
+    this.readBy = const [],
+    this.status = 'unread',
+    this.backgroundColor = Colors.white,
+    this.textColor = Colors.black,
     this.additionalData,
   });
 
   factory Notification.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final readBy = List<String>.from(data['readBy'] ?? []);
+    
     return Notification(
       id: doc.id,
       title: data['title'] ?? '',
-      message: data['message'] ?? '',
+      message: data['body'] ?? '', // Changed from 'message' to 'body'
       type: NotificationType.values.firstWhere(
         (e) => e.toString() == 'NotificationType.${data['type']}',
         orElse: () => NotificationType.admin,
       ),
       gameId: data['gameId'],
       matchId: data['matchId'],
-      isRead: data['isRead'] ?? false,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      additionalData: data['additionalData'],
+      isRead: currentUserId != null && readBy.contains(currentUserId),
+      createdAt: data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate() : DateTime.now(),
+      targetUserId: data['targetUserId'],
+      readBy: readBy,
+      status: data['status'] ?? 'unread',
+      backgroundColor: data['backgroundColor'] != null ? Color(int.parse('FF${data['backgroundColor']}', radix: 16)) : Colors.white,
+      textColor: data['textColor'] != null ? Color(int.parse('FF${data['textColor']}', radix: 16)) : Colors.black,
+      additionalData: data['data'], // Changed from 'additionalData' to 'data'
     );
   }
 
   Map<String, dynamic> toFirestore() {
     return {
       'title': title,
-      'message': message,
+      'body': message,
       'type': type.toString().split('.').last,
       'gameId': gameId,
       'matchId': matchId,
-      'isRead': isRead,
+      'targetUserId': targetUserId,
+      'readBy': readBy,
+      'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
-      'additionalData': additionalData,
+      'backgroundColor': backgroundColor.value.toRadixString(16),
+      'textColor': textColor.value.toRadixString(16),
+      'data': additionalData,
     };
   }
 

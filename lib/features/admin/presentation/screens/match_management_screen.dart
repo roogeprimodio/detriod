@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/widgets/loading_indicator.dart';
 import '../../domain/models/match.dart';
+import '../../../../services/notification_service.dart';
+import 'package:provider/provider.dart';
 
 class MatchManagementScreen extends StatefulWidget {
   const MatchManagementScreen({super.key});
@@ -467,6 +469,116 @@ class _MatchManagementScreenState extends State<MatchManagementScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _createOrUpdateMatch({
+    required String gameId,
+    required String name,
+    required String description,
+    required DateTime startTime,
+    required int maxPlayers,
+    required double entryFee,
+    required double prizePool,
+    String? matchId,
+  }) async {
+    try {
+      final notificationService = Provider.of<NotificationService>(context, listen: false);
+      
+      if (matchId == null) {
+        // Creating new match
+        await FirebaseFirestore.instance
+            .collection('matches')
+            .add({
+          'gameId': gameId,
+          'title': name,
+          'description': description,
+          'startTime': startTime,
+          'maxParticipants': maxPlayers,
+          'entryFee': entryFee,
+          'prizePool': prizePool,
+          'status': 'upcoming',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        
+        // Send notification for new match
+        await notificationService.sendNotificationToAllUsers(
+          title: 'New Match Available!',
+          body: 'Join the new match: $name',
+          type: 'match',
+        );
+      } else {
+        // Updating existing match
+        await FirebaseFirestore.instance
+            .collection('matches')
+            .doc(matchId)
+            .update({
+          'title': name,
+          'description': description,
+          'startTime': startTime,
+          'maxParticipants': maxPlayers,
+          'entryFee': entryFee,
+          'prizePool': prizePool,
+        });
+        
+        // Send notification for match update
+        await notificationService.sendNotificationToAllUsers(
+          title: 'Match Updated',
+          body: 'The match $name has been updated',
+          type: 'match',
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(matchId == null ? 'Match created successfully' : 'Match updated successfully')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateMatchStatus(String matchId, String status) async {
+    try {
+      final notificationService = Provider.of<NotificationService>(context, listen: false);
+      final matchDoc = await FirebaseFirestore.instance
+          .collection('matches')
+          .doc(matchId)
+          .get();
+      final matchData = matchDoc.data() as Map<String, dynamic>;
+      
+      await FirebaseFirestore.instance
+          .collection('matches')
+          .doc(matchId)
+          .update({
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
+      // Send notification for status change
+      await notificationService.sendNotificationToAllUsers(
+        title: 'Match Status Update',
+        body: 'Match ${matchData['title']} is now $status',
+        type: 'match',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Match status updated to $status')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 
   @override

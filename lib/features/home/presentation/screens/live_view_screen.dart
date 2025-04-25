@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:frenzy/core/providers/theme_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:frenzy/core/widgets/common_app_bar.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class LiveViewScreen extends StatefulWidget {
   const LiveViewScreen({super.key});
@@ -117,6 +118,52 @@ class _LiveViewScreenState extends State<LiveViewScreen> {
                         },
                         child: GestureDetector(
                           onTap: () {
+                            final youtubeUrl = stream['youtubeUrl'] as String?;
+                            if (youtubeUrl == null || youtubeUrl.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('No video URL available'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final videoId = YoutubePlayer.convertUrlToId(youtubeUrl);
+                            if (videoId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Invalid YouTube URL'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => Scaffold(
+                                  appBar: AppBar(
+                                    title: Text(stream['title'] ?? 'Live Stream'),
+                                    backgroundColor: Colors.black,
+                                  ),
+                                  body: YoutubePlayer(
+                                    controller: YoutubePlayerController(
+                                      initialVideoId: videoId,
+                                      flags: const YoutubePlayerFlags(
+                                        autoPlay: true,
+                                        mute: false,
+                                        isLive: true,
+                                      ),
+                                    ),
+                                    showVideoProgressIndicator: true,
+                                    progressIndicatorColor: Colors.red,
+                                    progressColors: const ProgressBarColors(
+                                      playedColor: Colors.red,
+                                      handleColor: Colors.redAccent,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
                             // Navigate to stream details
                           },
                           child: Container(

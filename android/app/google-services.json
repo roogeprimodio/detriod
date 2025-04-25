@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "701669579834",
+    "project_id": "frenzy-10e49",
+    "storage_bucket": "frenzy-10e49.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:701669579834:android:2007ff754cc0fd52142903",
+        "android_client_info": {
+          "package_name": "com.rooge.frenzy.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTh6GU0oSr9k0fMDhF4pKY84R8GcwnN_I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

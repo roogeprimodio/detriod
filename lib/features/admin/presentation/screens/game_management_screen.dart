@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../../core/widgets/loading_indicator.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:frenzy/core/widgets/admin_scaffold.dart';
+import 'package:frenzy/core/widgets/common_app_bar.dart';
+import '../../../../services/notification_service.dart';
+import 'package:provider/provider.dart';
 
 class GameManagementScreen extends StatefulWidget {
   const GameManagementScreen({super.key});
@@ -11,191 +17,165 @@ class GameManagementScreen extends StatefulWidget {
 
 class _GameManagementScreenState extends State<GameManagementScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
+  final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _imageUrlController = TextEditingController();
-  bool _isActive = true;
-  String _selectedCategory = 'Action';
-
-  static const List<String> _categories = [
-    'Action',
-    'Adventure',
-    'RPG',
-    'Strategy',
-    'Sports',
-    'Racing',
-    'Puzzle',
-    'Shooter',
-    'Fighting',
-    'Other'
-  ];
+  final _imagePicker = ImagePicker();
+  File? _imageFile;
+  bool _isLoading = false;
+  final _scrollController = ScrollController();
+  String? _editingGameId;
+  String? _existingImageUrl;
 
   @override
   void dispose() {
-    _titleController.dispose();
+    _nameController.dispose();
     _descriptionController.dispose();
-    _imageUrlController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  void _resetForm() {
-    _titleController.clear();
-    _descriptionController.clear();
-    _imageUrlController.clear();
-    _isActive = true;
-    _selectedCategory = _categories.first;
+  Future<void> _pickImage() async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+          _existingImageUrl = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
+    setState(() => _isLoading = true);
+
     try {
+      String? imageUrl = _existingImageUrl;
+      if (_imageFile != null) {
+        final ref = FirebaseStorage.instance
+            .ref()
+            .child('game_images')
+            .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+        await ref.putFile(_imageFile!);
+        imageUrl = await ref.getDownloadURL();
+      }
+
       final gameData = {
-        'title': _titleController.text.trim(),
+        'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'imageUrl': _imageUrlController.text.trim().isEmpty
-            ? 'https://via.placeholder.com/300x200?text=Game'
-            : _imageUrlController.text.trim(),
-        'categories': [_selectedCategory],
-        'platforms': ['All'],
-        'isActive': _isActive,
-        'rating': 0.0,
-        'totalRatings': 0,
-        'createdAt': FieldValue.serverTimestamp(),
+        'imageUrl': imageUrl,
         'updatedAt': FieldValue.serverTimestamp(),
-        'createdBy': 'admin',
       };
 
-      await FirebaseFirestore.instance.collection('games').add(gameData);
+      if (_editingGameId != null) {
+        await FirebaseFirestore.instance
+            .collection('games')
+            .doc(_editingGameId)
+            .update(gameData);
+      } else {
+        await FirebaseFirestore.instance.collection('games').add({
+          ...gameData,
+          'isActive': true,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       if (mounted) {
-        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Game added successfully')),
+          SnackBar(
+            content: Text(
+              _editingGameId != null
+                  ? 'Game updated successfully'
+                  : 'Game added successfully',
+            ),
+          ),
         );
-        _resetForm();
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Error: ${e.toString()}')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
 
-  Future<void> _updateGame(String gameId, Map<String, dynamic> currentData) async {
-    try {
-      final gameData = {
-        'title': _titleController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'imageUrl': _imageUrlController.text.trim().isEmpty
-            ? 'https://via.placeholder.com/300x200?text=Game'
-            : _imageUrlController.text.trim(),
-        'categories': [_selectedCategory],
-        'isActive': _isActive,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
+  Future<void> _showAddEditGameDialog({
+    String? gameId,
+    Map<String, dynamic>? existingGame,
+  }) async {
+    final nameController = TextEditingController(text: existingGame?['name']);
+    final descriptionController = TextEditingController(text: existingGame?['description']);
+    String? imageUrl = existingGame?['imageUrl'];
+    bool isActive = existingGame?['isActive'] ?? true;
 
-      await FirebaseFirestore.instance
-          .collection('games')
-          .doc(gameId)
-          .update(gameData);
-
-      if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Game updated successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    }
-  }
-
-  void _showAddEditGameDialog([DocumentSnapshot? game]) {
-    if (game != null) {
-      final data = game.data() as Map<String, dynamic>;
-      _titleController.text = data['title'] ?? '';
-      _descriptionController.text = data['description'] ?? '';
-      _imageUrlController.text = data['imageUrl'] ?? '';
-      _isActive = data['isActive'] ?? true;
-      _selectedCategory = (data['categories'] as List?)?.firstOrNull?.toString() ?? _categories.first;
-    } else {
-      _resetForm();
-    }
-
-    showDialog(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(game != null ? 'Edit Game' : 'Add New Game'),
+        title: Text(existingGame == null ? 'Add Game' : 'Edit Game'),
         content: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Title',
-                    border: OutlineInputBorder(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Game Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              if (imageUrl != null)
+                Image.network(
+                  imageUrl,
+                  height: 100,
+                  width: 100,
+                  fit: BoxFit.cover,
+                ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _pickImage,
+                child: const Text('Pick Image'),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Text('Active'),
+                  const Spacer(),
+                  Switch(
+                    value: isActive,
+                    onChanged: (value) => isActive = value,
                   ),
-                  validator: (value) =>
-                      value?.trim().isEmpty == true ? 'Title is required' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                  validator: (value) =>
-                      value?.trim().isEmpty == true ? 'Description is required' : null,
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _selectedCategory,
-                  decoration: const InputDecoration(
-                    labelText: 'Category',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _categories.map((category) {
-                    return DropdownMenuItem(
-                      value: category,
-                      child: Text(category),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _selectedCategory = value);
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _imageUrlController,
-                  decoration: const InputDecoration(
-                    labelText: 'Image URL (Optional)',
-                    hintText: 'Leave empty for default image',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  title: const Text('Active'),
-                  value: _isActive,
-                  onChanged: (value) => setState(() => _isActive = value),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ),
         ),
         actions: [
@@ -205,149 +185,293 @@ class _GameManagementScreenState extends State<GameManagementScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              if (game != null) {
-                _updateGame(game.id, game.data() as Map<String, dynamic>);
-              } else {
-                _submitForm();
+              if (nameController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a game name')),
+                );
+                return;
               }
+              Navigator.pop(context, {
+                'name': nameController.text,
+                'description': descriptionController.text,
+                'imageUrl': imageUrl,
+                'isActive': isActive,
+              });
             },
-            child: Text(game != null ? 'Update' : 'Add'),
+            child: Text(existingGame == null ? 'Add' : 'Save'),
           ),
         ],
       ),
     );
+
+    if (result != null) {
+      try {
+        if (gameId == null) {
+          // Add new game
+          await FirebaseFirestore.instance.collection('games').add({
+            ...result,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        } else {
+          // Update existing game
+          await FirebaseFirestore.instance.collection('games').doc(gameId).update(result);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                gameId == null ? 'Game added successfully' : 'Game updated successfully',
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showDeleteConfirmation(String gameId, String gameName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Game'),
+        content: Text('Are you sure you want to delete "$gameName"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await FirebaseFirestore.instance.collection('games').doc(gameId).delete();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Game deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting game: $e')),
+          );
+        }
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Games'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => _showAddEditGameDialog(),
-          ),
-        ],
+    return AdminScaffold(
+      title: 'Game Management',
+      scrollController: _scrollController,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddEditGameDialog(),
+        child: const Icon(Icons.add),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('games')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const LoadingIndicator();
-          }
-
-          final games = snapshot.data?.docs ?? [];
-          if (games.isEmpty) {
-            return const Center(
-              child: Text('No games available. Add your first game!'),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: games.length,
-            itemBuilder: (context, index) {
-              final game = games[index];
-              final data = game.data() as Map<String, dynamic>;
-              
-              return Dismissible(
-                key: Key(game.id),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  child: const Icon(Icons.delete, color: Colors.white),
-                ),
-                confirmDismiss: (direction) async {
-                  return await showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Delete Game'),
-                      content: Text('Are you sure you want to delete "${data['title']}"?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                onDismissed: (direction) async {
-                  try {
-                    await FirebaseFirestore.instance
-                        .collection('games')
-                        .doc(game.id)
-                        .delete();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${data['title']} deleted successfully')),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error deleting game: $e')),
-                    );
-                  }
-                },
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: ListTile(
-                    title: Text(data['title'] ?? 'Untitled'),
-                    subtitle: Text(data['description'] ?? 'No description'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            data['isActive'] == true
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            color: data['isActive'] == true
-                                ? Colors.green
-                                : Colors.grey,
-                          ),
-                          onPressed: () async {
-                            try {
-                              await FirebaseFirestore.instance
-                                  .collection('games')
-                                  .doc(game.id)
-                                  .update({
-                                'isActive': !(data['isActive'] ?? true),
-                              });
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: $e')),
-                                );
-                              }
-                            }
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () => _showAddEditGameDialog(game),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+      body: _buildGameList(),
     );
+  }
+
+  Widget _buildGameList() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('games')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Error: ${snapshot.error}'),
+          );
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final games = snapshot.data?.docs ?? [];
+
+        if (games.isEmpty) {
+          return const Center(
+            child: Text('No games found'),
+          );
+        }
+
+        return ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.all(16),
+          itemCount: games.length,
+          itemBuilder: (context, index) {
+            final gameDoc = games[index];
+            final gameData = gameDoc.data() as Map<String, dynamic>;
+            final gameId = gameDoc.id;
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                leading: CircleAvatar(
+                  radius: 24,
+                  backgroundImage: gameData['imageUrl'] != null
+                      ? NetworkImage(gameData['imageUrl'])
+                      : null,
+                  child: gameData['imageUrl'] == null
+                      ? const Icon(Icons.games)
+                      : null,
+                ),
+                title: Text(
+                  gameData['name'],
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(gameData['description'] ?? 'No description'),
+                    Text(
+                      'Created: ${_formatDate(gameData['createdAt'])}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () => _showAddEditGameDialog(
+                        gameId: gameId,
+                        existingGame: gameData,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => _showDeleteConfirmation(
+                        gameId,
+                        gameData['name'],
+                      ),
+                    ),
+                    Switch(
+                      value: gameData['isActive'] ?? true,
+                      onChanged: (value) => _updateGameStatus(gameId, value),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _formatDate(dynamic date) {
+    if (date is Timestamp) {
+      return date.toDate().toString();
+    } else if (date is DateTime) {
+      return date.toString();
+    } else {
+      throw Exception('Unsupported date format');
+    }
+  }
+
+  void _updateGameStatus(String gameId, bool value) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('games')
+          .doc(gameId)
+          .update({'isActive': value});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Game ${value ? 'activated' : 'deactivated'}',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _addOrUpdateGame({
+    required String name,
+    required String description,
+    required bool isActive,
+    String? gameId,
+    String? imageUrl,
+  }) async {
+    try {
+      final notificationService = Provider.of<NotificationService>(context, listen: false);
+      
+      if (gameId == null) {
+        // Adding new game
+        await FirebaseFirestore.instance.collection('games').add({
+          'name': name,
+          'description': description,
+          'isActive': isActive,
+          'imageUrl': imageUrl,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        
+        // Send notification for new game
+        await notificationService.sendNotificationToAllUsers(
+          title: 'New Game Available!',
+          body: 'Check out the new game: $name',
+          type: 'game',
+        );
+      } else {
+        // Updating existing game
+        await FirebaseFirestore.instance.collection('games').doc(gameId).update({
+          'name': name,
+          'description': description,
+          'isActive': isActive,
+          if (imageUrl != null) 'imageUrl': imageUrl,
+        });
+        
+        // Send notification for game update
+        await notificationService.sendNotificationToAllUsers(
+          title: 'Game Updated',
+          body: 'The game $name has been updated',
+          type: 'game',
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(gameId == null ? 'Game added successfully' : 'Game updated successfully')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 }

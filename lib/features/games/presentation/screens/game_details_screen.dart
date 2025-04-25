@@ -29,12 +29,34 @@ class GameDetailsScreen extends StatelessWidget {
                 game.bannerUrl ?? game.imageUrl,
                 width: double.infinity,
                 fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    color: Colors.grey[300],
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    ),
+                  );
+                },
                 errorBuilder: (context, error, stackTrace) {
                   debugPrint('Error loading image: $error');
                   return Container(
                     color: Colors.grey[300],
                     child: const Center(
-                      child: Icon(Icons.error_outline, size: 50),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 50, color: Colors.red),
+                          SizedBox(height: 8),
+                          Text('Failed to load image',
+                              style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
                     ),
                   );
                 },

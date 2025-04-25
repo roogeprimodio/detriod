@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read: if true;  // Public read access
+      allow write: if request.auth != null;  // Only authenticated users can write
+    }
+    
+    // Profile images
+    match /profile_images/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Game images
+    match /game_images/{gameId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+        get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    // Match screenshots
+    match /match_screenshots/{matchId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+} 

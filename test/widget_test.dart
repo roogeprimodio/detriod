@@ -15,7 +15,7 @@ import 'package:frenzy/core/providers/theme_provider.dart';
 import 'package:frenzy/features/home/presentation/providers/user_profile_provider.dart';
 import 'package:frenzy/features/home/presentation/screens/home_screen.dart';
 import 'package:frenzy/features/home/presentation/screens/dashboard_screen.dart';
-import 'package:frenzy/features/admin/presentation/screens/admin_dashboard.dart';
+import 'package:frenzy/features/admin/presentation/screens/admin_dashboard_screen.dart';
 import 'package:frenzy/features/admin/presentation/screens/game_management_screen.dart';
 import 'package:frenzy/features/admin/presentation/screens/match_management_screen.dart';
 import 'package:frenzy/core/widgets/common_app_bar.dart';
@@ -179,7 +179,7 @@ void main() {
             ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ],
           child: const MaterialApp(
-            home: AdminDashboard(),
+            home: AdminDashboardScreen(),
           ),
         ),
       );

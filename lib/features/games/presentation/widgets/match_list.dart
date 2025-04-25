@@ -20,6 +20,7 @@ class MatchList extends StatelessWidget {
           .collection('matches')
           .where('gameId', isEqualTo: gameId)
           .orderBy('startTime', descending: true)
+          .orderBy('status')
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {

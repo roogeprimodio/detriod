@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../features/admin/presentation/screens/admin_dashboard.dart';
+import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/match_management_screen.dart';
+import '../../features/admin/presentation/screens/notification_management_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/signup_screen.dart';
 import '../../features/games/presentation/screens/game_details_screen.dart';
@@ -14,6 +15,7 @@ class AppRouter {
   static const String adminDashboard = '/admin-dashboard';
   static const String adminMatches = '/admin-matches';
   static const String gameDetails = '/game-details';
+  static const String notificationManagement = '/notification-management';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -24,13 +26,17 @@ class AppRouter {
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
       case adminDashboard:
-        return MaterialPageRoute(builder: (_) => const AdminDashboard());
+        return MaterialPageRoute(builder: (_) => const AdminDashboardScreen());
       case adminMatches:
         return MaterialPageRoute(builder: (_) => const MatchManagementScreen());
       case gameDetails:
         final game = settings.arguments as Game;
         return MaterialPageRoute(
           builder: (_) => GameDetailsScreen(game: game),
+        );
+      case notificationManagement:
+        return MaterialPageRoute(
+          builder: (_) => const NotificationManagementScreen(),
         );
       default:
         return MaterialPageRoute(

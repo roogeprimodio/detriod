@@ -121,8 +121,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.logout),
-                  onPressed: () {
-                    context.read<AuthProvider>().signOut();
+                  onPressed: () async {
+                    await context.read<AuthProvider>().signOut();
+                    if (context.mounted) {
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                        '/login',
+                        (route) => false,
+                      );
+                    }
                   },
                 ),
               ],

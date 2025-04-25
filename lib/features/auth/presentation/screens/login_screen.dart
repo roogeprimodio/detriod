@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:frenzy/core/providers/auth_provider.dart';
 import 'package:frenzy/core/config/app_router.dart';
 
@@ -45,14 +46,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       final email = _emailController.text.trim();
       final isAdminLogin = _tabController.index == 1;
 
-      // Validate email format based on selected tab
-      if (isAdminLogin && !email.toLowerCase().endsWith('@admin.com')) {
-        throw Exception('Admin email must end with @admin.com');
-      }
-      if (!isAdminLogin && email.toLowerCase().endsWith('@admin.com')) {
-        throw Exception('This is an admin email. Please use the admin tab to login.');
-      }
-
+      // First authenticate with Firebase
       await authProvider.signIn(
         email,
         _passwordController.text.trim(),
@@ -60,11 +54,44 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
       if (!mounted) return;
 
+      // After successful authentication, check user role
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(authProvider.user!.uid)
+          .get();
+
+      if (!userDoc.exists) {
+        await authProvider.signOut();
+        throw Exception('User account not found');
+      }
+
+      final isUserAdmin = userDoc.data()?['isAdmin'] ?? false;
+
+      // Validate login based on tab and user role
+      if (isAdminLogin && !isUserAdmin) {
+        await authProvider.signOut();
+        throw Exception('This account does not have admin privileges');
+      }
+      if (!isAdminLogin && isUserAdmin) {
+        await authProvider.signOut();
+        throw Exception('Admin accounts must use the admin login tab');
+      }
+
+      if (!mounted) return;
+
       // Navigate based on user role
-      if (authProvider.isAdmin) {
-        Navigator.pushReplacementNamed(context, AppRouter.adminDashboard);
+      if (isUserAdmin) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRouter.adminDashboard,
+          (route) => false,
+        );
       } else {
-        Navigator.pushReplacementNamed(context, AppRouter.home);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRouter.home,
+          (route) => false,
+        );
       }
     } catch (e) {
       if (!mounted) return;
