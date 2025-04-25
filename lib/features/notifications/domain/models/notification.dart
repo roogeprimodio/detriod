@@ -60,12 +60,12 @@ class Notification {
       gameId: data['gameId'],
       matchId: data['matchId'],
       isRead: currentUserId != null && readBy.contains(currentUserId),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate() : DateTime.now(),
       targetUserId: data['targetUserId'],
       readBy: readBy,
       status: data['status'] ?? 'unread',
-      backgroundColor: Color(int.parse(data['backgroundColor'] ?? 'FFFFFFFF', radix: 16)),
-      textColor: Color(int.parse(data['textColor'] ?? 'FF000000', radix: 16)),
+      backgroundColor: data['backgroundColor'] != null ? Color(int.parse('FF${data['backgroundColor']}', radix: 16)) : Colors.white,
+      textColor: data['textColor'] != null ? Color(int.parse('FF${data['textColor']}', radix: 16)) : Colors.black,
       additionalData: data['data'], // Changed from 'additionalData' to 'data'
     );
   }
