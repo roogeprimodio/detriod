@@ -1,21 +1,12 @@
 workflows:
   flutter-app:
-    name: Flutter Build Workflow
+    name: Flutter Firebase Debug Build
     max_build_duration: 60
     environment:
       flutter: stable
       xcode: latest
       vars:
         FLUTTER_TARGET: "lib/main.dart"
-        SUPABASE_URL: Encrypted(...)
-        SUPABASE_ANON_KEY: Encrypted(...)
-      groups:
-        - supabase_credentials
-      android_signing:
-        - keystore_reference
-      ios_signing:
-        - provisioning_profiles
-        - certificate
     triggering:
       events:
         - push
@@ -28,19 +19,23 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Build APK
+      - name: Firebase Setup Check
         script: |
-          flutter build apk --release
+          echo "Make sure google-services.json and GoogleService-Info.plist are in place"
 
-      - name: Build iOS
+      - name: Build APK (Debug)
         script: |
-          flutter build ios --release --no-codesign
+          flutter build apk --debug
+
+      - name: Build iOS (Debug, No Code Sign)
+        script: |
+          flutter build ios --debug --no-codesign
 
     artifacts:
-      - build/app/outputs/flutter-apk/app-release.apk
-      - build/ios/ipa/*.ipa
+      - build/app/outputs/flutter-apk/app-debug.apk
+      - build/ios/iphonesimulator/*.app
 
     publishing:
       email:
         recipients:
-          - your-email@example.com
+          - your-dakugamer21@gmail.com
