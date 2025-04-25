@@ -343,6 +343,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             ),
                             const SizedBox(height: 20),
 
+                            // Social signup buttons
+                            SizedBox(
+                              height: 56,
+                              child: OutlinedButton.icon(
+                                onPressed: () {},
+                                icon: Icon(Icons.g_translate, color: colorScheme.onSurface),
+                                label: Text('Sign up with Google'),
+                                style: OutlinedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              height: 56,
+                              child: OutlinedButton.icon(
+                                onPressed: () {},
+                                icon: Icon(Icons.facebook, color: Colors.blue),
+                                label: Text('Sign up with Facebook'),
+                                style: OutlinedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
                             // Login Link
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(),
