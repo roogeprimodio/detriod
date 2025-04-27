@@ -1,7 +1,7 @@
 include ':app'
 
 def localProperties = new Properties()
-def localPropertiesFile = new File(rootDir, 'local.properties') // ✅ safer version
+def localPropertiesFile = new File(rootDir, 'local.properties') // ✅ FIXED LINE
 
 if (localPropertiesFile.exists()) {
     localPropertiesFile.withReader('UTF-8') { reader ->
