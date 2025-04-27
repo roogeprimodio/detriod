@@ -1,12 +1,15 @@
 include ':app'
 
 def localProperties = new Properties()
-def localPropertiesFile = rootProject.file('local.properties')
+def localPropertiesFile = new File(rootDir, 'local.properties') // ✅ safer version
+
 if (localPropertiesFile.exists()) {
-    localPropertiesFile.withReader('UTF-8') { reader -> localProperties.load(reader) }
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
 }
 
 def flutterSdkPath = localProperties.getProperty('flutter.sdk')
-assert flutterSdkPath != null, "Flutter SDK not found. Define location with flutter.sdk in the local.properties file."
+assert flutterSdkPath != null : "Flutter SDK not found. Define location with flutter.sdk in the local.properties file."
 
 apply from: "$flutterSdkPath/packages/flutter_tools/gradle/app_plugin_loader.gradle"
